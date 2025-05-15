@@ -1,0 +1,25 @@
+#[cfg(target_arch = "x86_64")]
+pub const SYS_OPEN: i64 = 2;
+#[cfg(target_arch = "x86_64")]
+pub const SYS_FORK: i64 = 57;
+#[cfg(target_arch = "x86_64")]
+pub const SYS_VFORK: i64 = 58;
+#[cfg(target_arch = "x86_64")]
+pub const SYS_RECV: i64 = native::SYS_recv;
+#[cfg(target_arch = "x86_64")]
+pub const SYS_SEND: i64 = native::SYS_send; // arm64 doesn't have a syscall number for open
+#[cfg(target_arch = "x86_64")]
+pub const SYS_RMDIR: i64 = native::SYS_rmdir;
+
+#[cfg(target_arch = "aarch64")]
+pub const SYS_OPEN: i64 = -1; // arm64 doesn't have a syscall number for open
+#[cfg(target_arch = "aarch64")]
+pub const SYS_FORK: i64 = -1;
+#[cfg(target_arch = "aarch64")]
+pub const SYS_VFORK: i64 = -1;
+#[cfg(target_arch = "aarch64")]
+pub const SYS_RECV: i64 = -1; // arm64 doesn't have a syscall number for recv
+#[cfg(target_arch = "aarch64")]
+pub const SYS_SEND: i64 = -1; // arm64 doesn't have a syscall number for send
+#[cfg(target_arch = "aarch64")]
+pub const SYS_RMDIR: i64 = -1;
