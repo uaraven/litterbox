@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env};
 
-use nix::unistd::Pid;
+use nix::{libc, unistd::Pid};
 
 use crate::syscall_event::{SyscallEvent, SyscallStopType};
 
@@ -11,11 +11,25 @@ use crate::syscall_event::{SyscallEvent, SyscallStopType};
 /// during `sys_open` call can be retrieved from this structure during the `sys_read` call.
 #[derive(Debug, Clone)]
 pub struct FdData {
+    // The name of this data. Depends on the syscall that created the fd
+    // For example, `pathname` for `sys_open` syscall or `addr` for `sys_connect`
     pub name: &'static str,
+    // The value associated with the fd
     pub value: String,
+    // The flags which were used when opening the fd.
     pub flags: u64,
 }
+impl FdData {
+    pub fn is_dir(&self) -> bool {
+        self.flags as i32 & libc::O_PATH == libc::O_PATH
+    }
 
+    pub fn is_close_on_exec(&self) -> bool {
+        self.flags as i32 & libc::O_CLOEXEC == libc::O_CLOEXEC
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct TraceProcess {
     pid: Pid,
     last_syscall: SyscallEvent,
@@ -38,13 +52,14 @@ impl TraceProcess {
         }
     }
 
-    pub fn copy_from(other: &TraceProcess, new_pid: Pid) -> Self {
+    /// Create a new TraceProcess with the same data as another TraceProcess
+    /// but with a different PID. This is used when a process forks.
+    pub fn clone_process(other: &TraceProcess, new_pid: Pid) -> Self {
         Self {
             pid: new_pid,
             cwd: other.cwd.clone(),
             last_syscall: SyscallEvent::fake_event(),
             expected_stop_type: SyscallStopType::Enter,
-            //TODO: Clean the fd map if FD_CLOEXEC or O_CLOEXEC are set when the new process is created
             fd_map: other.fd_map.clone(),
         }
     }
@@ -99,5 +114,22 @@ impl TraceProcess {
                 }
             }
         }
+    }
+
+    /// Deletes stored info for the file descriptors that are marked as close-on-exec
+    pub fn clear_closed_fds(&mut self) {
+        let mut fds_to_remove = Vec::new();
+        for (fd, fd_data) in &self.fd_map {
+            if fd_data.is_close_on_exec() {
+                fds_to_remove.push(*fd);
+            }
+        }
+        for fd in fds_to_remove {
+            self.remove_fd(fd);
+        }
+    }
+
+    pub fn set_cwd(&mut self, cwd: String) {
+        self.cwd = cwd;
     }
 }

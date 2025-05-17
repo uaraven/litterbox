@@ -70,9 +70,19 @@ impl<F: SyscallEventListener> TraceContext<F> {
                                 .expect("Failed to convert event to i32");
                             let new_pid = Pid::from_raw(event_data);
                             println!("Exec'ing new  process with pid={} exec", new_pid);
-                            let new_process = TraceProcess::new(new_pid);
-                            self.processes.clear();
-                            self.processes.insert(new_pid, new_process);
+                            // remove all other processes from the list
+                            let mut pids_to_remove = Vec::new();
+                            for pid in self.processes.keys() {
+                                if *pid != new_pid {
+                                    pids_to_remove.push(*pid);
+                                }
+                            }
+                            for pid in pids_to_remove {
+                                self.processes.remove(&pid);
+                            }
+                            if let Some(process) = self.processes.get_mut(&pid) {
+                                process.clear_closed_fds();
+                            }
                         } else if event == PTRACE_EVENT_CLONE
                             || event == PTRACE_EVENT_FORK
                             || event == PTRACE_EVENT_VFORK
@@ -87,7 +97,7 @@ impl<F: SyscallEventListener> TraceContext<F> {
                                 let parent = self.processes.get_mut(&pid).expect(
                                     format!("No process with pid {} is being traced", pid).as_str(),
                                 );
-                                let child_process = TraceProcess::copy_from(&parent, child_pid);
+                                let child_process = TraceProcess::clone_process(&parent, child_pid);
                                 self.processes.insert(child_pid, child_process);
                             } else {
                                 println!("Process {} started child process {}", pid, child_pid);

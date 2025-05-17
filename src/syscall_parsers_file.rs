@@ -202,3 +202,31 @@ pub fn parse_fchmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
         extras,
     )
 }
+
+pub fn parse_chdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let is_entry = proc.is_entry(regs.syscall_id);
+    let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[1] as usize) {
+        Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
+        Err(_) => ("".to_string(), SyscallArgument::Ptr(regs.regs[1])),
+    };
+    if !is_entry {
+        proc.set_cwd(pathname.clone());
+    }
+    SyscallEvent::new_with_extras(proc, Vec::from([pathname_arg]), &regs, Default::default())
+}
+
+pub fn parse_fchdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let is_entry = proc.is_entry(regs.syscall_id);
+    let fd = regs.regs[0] as i64;
+    if let Some(fd_data) = proc.get_fd(fd) {
+        if !is_entry && fd > 0 {
+            proc.set_cwd(fd_data.value.clone());
+        }
+    }
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([SyscallArgument::DirFd(regs.regs[0])]),
+        &regs,
+        Default::default(),
+    )
+}

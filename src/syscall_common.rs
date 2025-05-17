@@ -11,6 +11,7 @@ use crate::trace_process::TraceProcess;
 pub const EXTRA_PATHNAME: &str = "pathname";
 pub const EXTRA_ADDR: &str = "addr";
 pub const EXTRA_FLAGS: &str = "flags";
+pub const EXTRA_DIRFD: &str = "dirfd";
 
 pub const MAX_BUFFER_SIZE: usize = 32;
 

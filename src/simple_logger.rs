@@ -2,7 +2,14 @@ use crate::syscall_event::{SyscallEvent, SyscallEventListener, SyscallStopType};
 use crate::syscall_ids::*;
 use syscall_numbers::native;
 
-const LOG_ON_ENTER: [i64; 4] = [native::SYS_clone, native::SYS_clone3, SYS_FORK, SYS_VFORK];
+const LOG_ON_ENTER: [i64; 6] = [
+    native::SYS_clone,
+    native::SYS_clone3,
+    SYS_FORK,
+    SYS_VFORK,
+    native::SYS_execve,
+    native::SYS_execveat,
+]; // Example syscall IDs
 
 const LOGGABLE_SYSCALLS: [i64; 13] = [
     SYS_OPEN,

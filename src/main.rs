@@ -36,11 +36,16 @@ fn main() {
 
     match unsafe { fork() } {
         Ok(ForkResult::Child) => {
-            ptrace::traceme().expect("Failed to trace me");
+            let pid = std::process::id();
+            println!("Child process PID: {}", pid);
+            ptrace::traceme().expect("Failed to trace child process");
+            println!("Starting child process: {}", program);
             let err = exec::Command::new(program).args(&program_args).exec();
             println!("Error: {}", err);
         }
         Ok(ForkResult::Parent { child }) => {
+            let pid = std::process::id();
+            println!("Parent process PID: {}", pid);
             let mut tracer = strace::TraceContext::new(child, Some(SimpleLogger {}));
 
             tracer.trace_process();
