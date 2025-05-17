@@ -4,8 +4,8 @@ use crate::syscall_common::SyscallParserFn;
 use crate::syscall_event::SyscallEvent;
 use crate::syscall_ids::*;
 use crate::syscall_parsers_file::{
-    parse_chdir, parse_close, parse_fchdir, parse_fchmod, parse_open, parse_openat, parse_openat2,
-    parse_read, parse_write,
+    parse_chdir, parse_close, parse_creat, parse_fchdir, parse_fchmod, parse_open, parse_openat,
+    parse_openat2, parse_read, parse_write,
 };
 use crate::syscall_parsers_process::{parse_clone, parse_clone3, parse_execve, parse_execveat};
 use crate::syscall_parsers_socket::{
@@ -23,6 +23,9 @@ pub fn syscall_parser(id: u64) -> SyscallParserFn {
         return parse_default;
     }
     // special handling for syscalls that don't exist on arm64
+    if cid == SYS_CREAT {
+        return parse_creat;
+    }
     if cid == SYS_OPEN {
         return parse_open;
     }

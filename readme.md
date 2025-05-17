@@ -1,5 +1,7 @@
 # Litterbox
 
+<img src="logo.png" style="width:33%;">
+
 _Litterbox_ is a sandboxing tool which can run any application in a sandbox and then produce a report on which files the app has tried to access, which network addresses (hosts and IPs) it tried to connect to and which processes it tried to start.
 
 _Litterbox_ works on linux only as it requires `ptrace` apis.
@@ -39,3 +41,5 @@ _Litterbox_ is configured with a toml configuration file and it  supports follow
  - List of applications that can be started
  - List of syscalls that are allowed
  - List of syscalls that are traced
+
+Details TDB

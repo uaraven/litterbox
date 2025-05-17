@@ -132,4 +132,8 @@ impl TraceProcess {
     pub fn set_cwd(&mut self, cwd: String) {
         self.cwd = cwd;
     }
+
+    pub fn get_cwd(&self) -> String {
+        self.cwd.clone()
+    }
 }

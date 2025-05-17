@@ -1,6 +1,8 @@
 #[cfg(target_arch = "x86_64")]
 pub const SYS_OPEN: i64 = 2;
 #[cfg(target_arch = "x86_64")]
+pub const SYS_CREAT: i64 = native::SYS_creat;
+#[cfg(target_arch = "x86_64")]
 pub const SYS_FORK: i64 = 57;
 #[cfg(target_arch = "x86_64")]
 pub const SYS_VFORK: i64 = 58;
@@ -13,6 +15,8 @@ pub const SYS_RMDIR: i64 = native::SYS_rmdir;
 
 #[cfg(target_arch = "aarch64")]
 pub const SYS_OPEN: i64 = -1; // arm64 doesn't have a syscall number for open
+#[cfg(target_arch = "aarch64")]
+pub const SYS_CREAT: i64 = -1; // arm64 doesn't have a syscall number for open
 #[cfg(target_arch = "aarch64")]
 pub const SYS_FORK: i64 = -1;
 #[cfg(target_arch = "aarch64")]
