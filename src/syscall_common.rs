@@ -5,8 +5,8 @@ use syscall_numbers::native;
 use std::os::raw::c_long;
 
 use crate::regs::Regs;
-use crate::strace::TraceProcess;
 use crate::syscall_event::SyscallEvent;
+use crate::trace_process::TraceProcess;
 
 pub const EXTRA_PATHNAME: &str = "pathname";
 pub const EXTRA_ADDR: &str = "addr";
@@ -58,4 +58,16 @@ pub fn read_buffer(pid: Pid, mut addr: usize, size: usize) -> Result<Vec<u8>, ni
 
         addr += size_of::<c_long>();
     }
+}
+
+pub fn read_buffer_as_type<T>(pid: Pid, mut addr: usize) -> Result<T, nix::Error> {
+    let size = std::mem::size_of::<T>();
+    let mem = match read_buffer(pid, addr, size) {
+        Ok(mem) => mem,
+        Err(e) => {
+            return Err(e);
+        }
+    };
+    let buf: T = unsafe { std::ptr::read(mem.as_ptr() as *const _) };
+    Ok(buf)
 }

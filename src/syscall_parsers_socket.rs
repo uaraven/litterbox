@@ -11,10 +11,10 @@ use nix::{
 
 use crate::{
     regs::Regs,
-    strace::TraceProcess,
     syscall_args::SyscallArgument,
-    syscall_common::{read_buffer, read_cstring, EXTRA_ADDR, MAX_BUFFER_SIZE},
+    syscall_common::{EXTRA_ADDR, MAX_BUFFER_SIZE, read_buffer, read_cstring},
     syscall_event::{ExtraData, SyscallEvent},
+    trace_process::TraceProcess,
 };
 
 fn get_sockaddr_as_arg(pid: Pid, regs: &Regs, reg_ptr: usize, reg_size: usize) -> SyscallArgument {
@@ -64,7 +64,7 @@ pub fn parse_connect(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
 
     let address = arguments.get(1).unwrap().to_string();
     if is_entry {
-        proc.add_fd(regs.regs[0] as i64, EXTRA_ADDR, address);
+        proc.add_fd(regs.regs[0] as i64, EXTRA_ADDR, address, 0);
     }
     SyscallEvent::new(proc, arguments, &regs)
 }
@@ -79,7 +79,7 @@ pub fn parse_bind(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
 
     let address = arguments.get(1).unwrap().to_string();
     if is_entry {
-        proc.add_fd(regs.regs[0] as i64, EXTRA_ADDR, address);
+        proc.add_fd(regs.regs[0] as i64, EXTRA_ADDR, address, 0);
     }
     SyscallEvent::new(&proc, arguments, &regs)
 }

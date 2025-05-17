@@ -28,7 +28,7 @@ fn is_log_on_entry(syscall_id: i64) -> bool {
     LOG_ON_ENTER.contains(&syscall_id)
 }
 
-struct SimpleLogger {}
+pub struct SimpleLogger {}
 
 impl SyscallEventListener for SimpleLogger {
     fn process_event(&mut self, event: &SyscallEvent) -> Option<SyscallEvent> {

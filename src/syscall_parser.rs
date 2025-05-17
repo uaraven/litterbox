@@ -1,16 +1,16 @@
 use crate::regs::Regs;
-use crate::strace::TraceProcess;
 use crate::syscall_args::SyscallArgument;
 use crate::syscall_common::SyscallParserFn;
 use crate::syscall_event::SyscallEvent;
 use crate::syscall_ids::*;
 use crate::syscall_parsers_file::{
-    parse_close, parse_open, parse_openat, parse_openat2, parse_read, parse_write,
+    parse_close, parse_fchmod, parse_open, parse_openat, parse_openat2, parse_read, parse_write,
 };
 use crate::syscall_parsers_process::{parse_clone, parse_clone3, parse_execve, parse_execveat};
 use crate::syscall_parsers_socket::{
     parse_bind, parse_connect, parse_listen, parse_recv, parse_recvfrom, parse_recvmsg,
 };
+use crate::trace_process::TraceProcess;
 
 use std::ffi::c_long;
 use syscall_numbers::*;
@@ -34,6 +34,7 @@ pub fn syscall_parser(id: u64) -> SyscallParserFn {
         native::SYS_close => parse_close,
         native::SYS_write => parse_write,
         native::SYS_read => parse_read,
+        native::SYS_fchmod => parse_fchmod,
         native::SYS_clone => parse_clone,
         native::SYS_clone3 => parse_clone3,
         native::SYS_execve => parse_execve,
@@ -60,4 +61,5 @@ fn parse_default(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
         ]),
         &regs,
     )
+    
 }

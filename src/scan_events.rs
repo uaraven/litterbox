@@ -133,7 +133,7 @@ impl ScanContext {
             .arguments
             .iter()
             .find(|arg| match arg {
-                SyscallArgument::Fd(fd) => true,
+                SyscallArgument::Fd(_fd) => true,
                 _ => false,
             })
             .map(|arg| match arg {

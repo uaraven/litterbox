@@ -1,4 +1,5 @@
 mod regs;
+mod scan_config;
 mod scan_events;
 mod simple_logger;
 mod strace;
@@ -10,10 +11,11 @@ mod syscall_parser;
 mod syscall_parsers_file;
 mod syscall_parsers_process;
 mod syscall_parsers_socket;
+mod trace_process;
 
 use nix::sys::ptrace;
 use nix::unistd::{ForkResult, fork};
-use simple_logger::logging_listener;
+use simple_logger::SimpleLogger;
 
 use std::env;
 
@@ -39,7 +41,7 @@ fn main() {
             println!("Error: {}", err);
         }
         Ok(ForkResult::Parent { child }) => {
-            let mut tracer = strace::TraceContext::new(child, Some(logging_listener));
+            let mut tracer = strace::TraceContext::new(child, Some(SimpleLogger {}));
 
             tracer.trace_process();
         }

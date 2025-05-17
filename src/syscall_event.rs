@@ -1,8 +1,8 @@
 use crate::regs::Regs;
-use crate::strace::TraceProcess;
 use crate::syscall_args::SyscallArgument;
 use crate::syscall_common::get_syscall_name;
 use crate::syscall_parser::syscall_parser;
+use crate::trace_process::TraceProcess;
 use nix::libc::{self, user_regs_struct};
 use nix::sys::ptrace;
 use nix::unistd::Pid;

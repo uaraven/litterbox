@@ -1,9 +1,13 @@
 use std::cmp::min;
 use std::collections::HashMap;
 
-use crate::strace::TraceProcess;
+use nix::libc::open_how;
+
 use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::{read_buffer, read_cstring, EXTRA_PATHNAME, MAX_BUFFER_SIZE};
+use crate::syscall_common::{
+    EXTRA_PATHNAME, MAX_BUFFER_SIZE, read_buffer, read_buffer_as_type, read_cstring,
+};
+use crate::trace_process::TraceProcess;
 use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
 
 pub fn parse_open(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
@@ -18,7 +22,12 @@ pub fn parse_open(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extra: ExtraData = HashMap::new();
     if !pathname.is_empty() {
         if !is_entry {
-            proc.add_fd(regs.return_value as i64, EXTRA_PATHNAME, pathname.clone());
+            proc.add_fd(
+                regs.return_value as i64,
+                EXTRA_PATHNAME,
+                pathname.clone(),
+                flags,
+            );
         }
         extra.insert(EXTRA_PATHNAME, pathname);
     }
@@ -41,7 +50,12 @@ pub fn parse_openat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extra: ExtraData = HashMap::new();
     if !pathname.is_empty() {
         if !is_entry {
-            proc.add_fd(regs.return_value as i64, EXTRA_PATHNAME, pathname.clone());
+            proc.add_fd(
+                regs.return_value as i64,
+                EXTRA_PATHNAME,
+                pathname.clone(),
+                flags,
+            );
         }
         extra.insert(EXTRA_PATHNAME, pathname);
     }
@@ -63,10 +77,20 @@ pub fn parse_openat2(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
         Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
         Err(_) => ("".to_string(), SyscallArgument::Ptr(regs.regs[1])),
     };
+
+    let open_flags = match read_buffer_as_type::<open_how>(proc.get_pid(), regs.regs[2] as usize) {
+        Ok(buf) => buf.flags,
+        Err(_) => 0,
+    };
     let mut extra: ExtraData = HashMap::new();
     if !pathname.is_empty() {
         if !is_entry {
-            proc.add_fd(regs.return_value as i64, EXTRA_PATHNAME, pathname.clone());
+            proc.add_fd(
+                regs.return_value as i64,
+                EXTRA_PATHNAME,
+                pathname.clone(),
+                open_flags,
+            );
         }
         extra.insert(EXTRA_PATHNAME, pathname);
     }
@@ -151,6 +175,29 @@ pub fn parse_read(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
             buffer_arg,
             SyscallArgument::Int(regs.regs[2]),
         ]),
+        &regs,
+        extras,
+    )
+}
+
+pub fn parse_fchmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let is_entry = proc.is_entry(regs.syscall_id);
+    let mut extras: ExtraData = HashMap::new();
+    // on arm64, the fd in regs[0] is rewritten with the return value on the exit from syscall
+    // so we need to use the fd from the entry event
+    let fd = match is_entry {
+        true => regs.regs[0],
+        false => proc
+            .get_last_syscall(regs.syscall_id)
+            .map(|event| event.regs.regs[0])
+            .unwrap_or(regs.regs[0]),
+    };
+    if let Some(fd_data) = proc.get_fd(fd as i64) {
+        extras.insert(fd_data.name, fd_data.value.clone());
+    };
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([SyscallArgument::Fd(fd), SyscallArgument::Int(regs.regs[1])]),
         &regs,
         extras,
     )

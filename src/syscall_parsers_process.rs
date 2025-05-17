@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use crate::{
     regs::Regs,
-    strace::TraceProcess,
     syscall_args::SyscallArgument,
     syscall_common::{EXTRA_FLAGS, read_buffer, read_cstring},
     syscall_event::{ExtraData, SyscallEvent},
+    trace_process::TraceProcess,
 };
 use nix::libc::clone_args;
 
