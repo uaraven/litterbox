@@ -40,7 +40,7 @@ fn add_fd_filepath(
 }
 
 //  int open(const char *pathname, int flags, ... /* mode_t mode */ );
-pub fn parse_open(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_open(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
 
     let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[0] as usize) {
@@ -70,7 +70,7 @@ pub fn parse_open(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
 }
 
 ///  int openat(int dirfd, const char *pathname, int flags, . . /* mode_t mode */ );
-pub fn parse_openat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_openat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[1] as usize) {
         Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
@@ -105,7 +105,7 @@ pub fn parse_openat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
 }
 
 /// long syscall(SYS_openat2, int dirfd, const char *pathname, struct open_how *how, size_t size);
-pub fn parse_openat2(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_openat2(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[1] as usize) {
         Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
@@ -143,7 +143,7 @@ pub fn parse_openat2(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
 }
 
 // int close(int fd);
-pub fn parse_close(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_close(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     if is_entry {
         proc.remove_fd(regs.regs[0] as i64);
@@ -152,7 +152,7 @@ pub fn parse_close(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
 }
 
 // int creat(const char *pathname, mode_t mode);
-pub fn parse_creat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_creat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[0] as usize) {
         Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
         Err(_) => ("".to_string(), SyscallArgument::Ptr(regs.regs[0])),
@@ -177,7 +177,7 @@ pub fn parse_creat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
 }
 
 // ssize_t write(int fd, const void buf[.count], size_t count);
-pub fn parse_write(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_write(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let mut extras: ExtraData = HashMap::new();
 
@@ -211,7 +211,7 @@ pub fn parse_write(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
 }
 
 // ssize_t read(int fd, void buf[.count], size_t count);
-pub fn parse_read(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_read(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let mut extras: ExtraData = HashMap::new();
     // on arm64, the fd in regs[0] is rewritten with the return value on the exit from syscall
@@ -234,7 +234,7 @@ pub fn parse_read(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     )
 }
 
-pub fn parse_fchmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_fchmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let mut extras: ExtraData = HashMap::new();
     // on arm64, the fd in regs[0] is rewritten with the return value on the exit from syscall
@@ -248,7 +248,7 @@ pub fn parse_fchmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     )
 }
 
-pub fn parse_chdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_chdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[1] as usize) {
         Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
@@ -260,7 +260,7 @@ pub fn parse_chdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     SyscallEvent::new_with_extras(proc, Vec::from([pathname_arg]), &regs, Default::default())
 }
 
-pub fn parse_fchdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_fchdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let fd = regs.regs[0] as i64;
     let mut extras = HashMap::<&str, String>::new();

@@ -4,17 +4,17 @@ pub struct TriggerEvent {
 }
 
 pub struct Config {
-    start_after: TriggerEvent,
-    allow_reads_from: Vec<String>,
-    allow_writes_to: Vec<String>,
-    allow_deletes_from: Vec<String>,
+    pub start_after: TriggerEvent,
+    pub allow_reads_from: Vec<String>,
+    pub allow_writes_to: Vec<String>,
+    pub allow_deletes_from: Vec<String>,
 
-    allow_delete_created: bool,
-    allow_cwd: bool,
+    pub allow_delete_created: bool,
+    pub allow_cwd: bool,
 
-    allow_connect_to: Vec<String>,
-    allow_listen: bool,
-    allow_exec_from: Vec<String>,
+    pub allow_connect_to: Vec<String>,
+    pub allow_listen: bool,
+    pub allow_exec_from: Vec<String>,
 
-    trace_syscalls: Vec<String>,
+    pub trace_syscalls: Vec<String>,
 }

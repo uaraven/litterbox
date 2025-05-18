@@ -5,26 +5,12 @@ use serde::Serialize;
 use syscall_numbers::native;
 
 use crate::{
+    scan_config::Config,
     syscall_args::SyscallArgument,
     syscall_common::{EXTRA_ADDR, EXTRA_PATHNAME},
     syscall_event::SyscallEvent,
     syscall_ids::{SYS_OPEN, SYS_RMDIR},
 };
-
-const UNPICKLER: &str = "unpickler.py";
-
-const DIRS_SAFE_TO_READ: [&'static str; 8] = [
-    r"^/tmp.*$",
-    r"^/var/tmp.*$",
-    r"^/dev/shm.*$",
-    r"^/run.*$",
-    r"^/var.*$",
-    r"^/lib.*$",
-    r"^/usr/lib.*$",
-    r"^/usr/local.*$",
-];
-
-const DIRS_UNSAFE_TO_READ: [&'static str; 3] = ["^/etc/shadow$", r"^.*\.aws/.*$", r"^.*\.ssh/.*$"];
 
 const VERIFY_SYSCALLS: [i64; 12] = [
     SYS_OPEN,
@@ -56,6 +42,7 @@ pub enum AccessType {
     Network,
     Process,
 }
+
 #[derive(Serialize, Clone, Debug)]
 pub struct ScanEvent {
     pub pid: u64,
@@ -77,32 +64,27 @@ impl ScanEvent {
 
 pub struct ScanContext {
     home_dir: String,
-    cwd: String,
-    tmp: String,
     events: Vec<ScanEvent>,
     syscalls: HashSet<i64>,
 
     primed: bool,
 
     dirs_safe_to_read: Vec<Regex>,
-    dirs_unsafe_to_read: Vec<Regex>,
+    dirs_safe_to_write: Vec<Regex>,
 }
 
 impl ScanContext {
-    pub fn new() -> ScanContext {
+    pub fn new_from_config(cfg: Config) -> ScanContext {
         let home_dir = std::env::var("HOME").unwrap_or_else(|_| "".to_string());
-        let cwd = std::env::current_dir()
-            .map(|path| path.to_string_lossy().to_string())
-            .unwrap_or_else(|_| "".to_string());
-        let tmp = std::env::temp_dir().to_string_lossy().to_string();
 
-        let mut dirs_safe_to_read: Vec<Regex> = Vec::new();
-        for dir in DIRS_SAFE_TO_READ.iter() {
-            dirs_safe_to_read.push(Regex::new(dir).unwrap());
+        let mut dirs_safe_to_read = HashSet::<String>::new();
+        for dir in cfg.allow_reads_from.iter() {
+            dirs_safe_to_read.insert(dir.clone());
         }
-        let mut dirs_unsafe_to_read: Vec<Regex> = Vec::new();
-        for dir in DIRS_UNSAFE_TO_READ.iter() {
-            dirs_unsafe_to_read.push(Regex::new(dir).unwrap());
+        let mut dirs_safe_to_write = HashSet::<String>::new();
+        for dir in cfg.allow_writes_to.iter() {
+            dirs_safe_to_read.insert(dir.clone());
+            dirs_safe_to_write.insert(dir.clone());
         }
 
         let syscall_ids = VERIFY_SYSCALLS
@@ -112,13 +94,17 @@ impl ScanContext {
 
         ScanContext {
             home_dir,
-            cwd,
-            tmp,
             events: vec![],
             syscalls: syscall_ids,
             primed: false,
-            dirs_safe_to_read: dirs_safe_to_read,
-            dirs_unsafe_to_read: dirs_unsafe_to_read,
+            dirs_safe_to_read: dirs_safe_to_read
+                .iter()
+                .map(|dir| Regex::new(dir).unwrap())
+                .collect(),
+            dirs_safe_to_write: dirs_safe_to_write
+                .iter()
+                .map(|dir| Regex::new(dir).unwrap())
+                .collect(),
         }
     }
 
@@ -155,14 +141,15 @@ impl ScanContext {
         let safety = self.classify_safety(&access_type, &resource, fd);
 
         let id = syscall.id as i64;
-        if id == SYS_OPEN || id == native::SYS_openat && !self.primed {
-            if let Some(path) = syscall.extra_context.get(EXTRA_PATHNAME) {
-                if path.ends_with(UNPICKLER) {
-                    self.primed = true;
-                    self.events.clear();
-                }
-            }
-        }
+        // TODO: check if we need to prime the context before starting sandbox
+        // if id == SYS_OPEN || id == native::SYS_openat && !self.primed {
+        //     if let Some(path) = syscall.extra_context.get(EXTRA_PATHNAME) {
+        //         if path.ends_with(UNPICKLER) {
+        //             self.primed = true;
+        //             self.events.clear();
+        //         }
+        //     }
+        // }
 
         let event = ScanEvent {
             pid: syscall.pid as u64,
@@ -193,7 +180,7 @@ impl ScanContext {
                 {
                     ScanSafety::Safe
                 } else if self
-                    .dirs_unsafe_to_read
+                    .dirs_safe_to_write
                     .iter()
                     .any(|dir_re| dir_re.is_match(&resource))
                 {
@@ -205,7 +192,7 @@ impl ScanContext {
             AccessType::FileSystemWrite => {
                 if fd >= 0 && fd < 3 {
                     ScanSafety::Safe
-                } else if resource.starts_with(self.tmp.as_str()) {
+                } else if self.is_safe(resource.clone()) {
                     ScanSafety::Safe
                 } else {
                     ScanSafety::Unsafe
@@ -221,6 +208,10 @@ impl ScanContext {
             AccessType::Process => ScanSafety::Unsafe,
             AccessType::Other => ScanSafety::Safe,
         }
+    }
+
+    fn is_safe(&self, resource: String) -> bool {
+        todo!()
     }
 }
 

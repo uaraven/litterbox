@@ -54,7 +54,7 @@ fn get_sockaddr_as_arg(pid: Pid, regs: &Regs, reg_ptr: usize, reg_size: usize) -
     }
 }
 
-pub fn parse_connect(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_connect(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let arguments = Vec::from([
         SyscallArgument::Int(regs.regs[0]),
@@ -69,7 +69,7 @@ pub fn parse_connect(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     SyscallEvent::new(proc, arguments, &regs)
 }
 
-pub fn parse_bind(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_bind(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let arguments = Vec::from([
         SyscallArgument::Fd(regs.regs[0]),
@@ -84,7 +84,7 @@ pub fn parse_bind(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     SyscallEvent::new(&proc, arguments, &regs)
 }
 
-pub fn parse_listen(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_listen(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
     let fd = regs.regs[0] as i64;
 
@@ -100,7 +100,7 @@ pub fn parse_listen(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     SyscallEvent::new_with_extras(proc, arguments, &regs, extras)
 }
 
-pub fn parse_recv(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_recv(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
     let fd = regs.regs[0] as i64;
     if let Some(fd_addr) = proc.get_fd(fd) {
@@ -124,7 +124,7 @@ pub fn parse_recv(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     )
 }
 
-pub fn parse_recvfrom(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_recvfrom(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
     let fd = regs.regs[0] as i64;
     let flags = regs.regs[3];
@@ -151,7 +151,7 @@ pub fn parse_recvfrom(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     )
 }
 
-pub fn parse_recvmsg(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_recvmsg(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
     let fd = regs.regs[0] as i64;
     if let Some(fd_data) = proc.get_fd(fd) {

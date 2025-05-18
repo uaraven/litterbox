@@ -10,7 +10,7 @@ use crate::syscall_event::{SyscallEvent, SyscallStopType};
 /// at the point of use. For example, the filepath associated with the file descriptor
 /// during `sys_open` call can be retrieved from this structure during the `sys_read` call.
 #[derive(Debug, Clone)]
-pub struct FdData {
+pub(crate) struct FdData {
     // The name of this data. Depends on the syscall that created the fd
     // For example, `pathname` for `sys_open` syscall or `addr` for `sys_connect`
     pub name: &'static str,
@@ -30,7 +30,7 @@ impl FdData {
 }
 
 #[derive(Debug, Clone)]
-pub struct TraceProcess {
+pub(crate) struct TraceProcess {
     pid: Pid,
     last_syscall: SyscallEvent,
     expected_stop_type: SyscallStopType,
@@ -39,7 +39,7 @@ pub struct TraceProcess {
 }
 
 impl TraceProcess {
-    pub fn new(pid: Pid) -> Self {
+    pub(crate) fn new(pid: Pid) -> Self {
         Self {
             pid,
             last_syscall: SyscallEvent::fake_event(),
@@ -54,7 +54,7 @@ impl TraceProcess {
 
     /// Create a new TraceProcess with the same data as another TraceProcess
     /// but with a different PID. This is used when a process forks.
-    pub fn clone_process(other: &TraceProcess, new_pid: Pid) -> Self {
+    pub(crate) fn clone_process(other: &TraceProcess, new_pid: Pid) -> Self {
         Self {
             pid: new_pid,
             cwd: other.cwd.clone(),
@@ -64,13 +64,13 @@ impl TraceProcess {
         }
     }
 
-    pub fn get_pid(&self) -> Pid {
+    pub(crate) fn get_pid(&self) -> Pid {
         self.pid
     }
 
     // Get the last syscall event
     // If the current syscall ID is not the same as the last syscall ID, return None
-    pub fn get_last_syscall(&self, current_syscall_id: u64) -> Option<&SyscallEvent> {
+    pub(crate) fn get_last_syscall(&self, current_syscall_id: u64) -> Option<&SyscallEvent> {
         if self.last_syscall.id != current_syscall_id {
             return None;
         } else {
@@ -78,30 +78,30 @@ impl TraceProcess {
         }
     }
 
-    pub fn set_last_syscall(&mut self, syscall: &SyscallEvent) {
+    pub(crate) fn set_last_syscall(&mut self, syscall: &SyscallEvent) {
         self.last_syscall = syscall.clone();
     }
 
-    pub fn add_fd(&mut self, fd: i64, name: &'static str, value: String, flags: u64) {
+    pub(crate) fn add_fd(&mut self, fd: i64, name: &'static str, value: String, flags: u64) {
         self.fd_map.insert(fd, FdData { name, value, flags });
     }
 
-    pub fn get_fd(&self, fd: i64) -> Option<&FdData> {
+    pub(crate) fn get_fd(&self, fd: i64) -> Option<&FdData> {
         self.fd_map.get(&fd)
     }
 
-    pub fn remove_fd(&mut self, fd: i64) {
+    pub(crate) fn remove_fd(&mut self, fd: i64) {
         self.fd_map.remove(&fd);
     }
 
-    pub fn set_current_stop_type(&mut self, stop_type: SyscallStopType) {
+    pub(crate) fn set_current_stop_type(&mut self, stop_type: SyscallStopType) {
         self.expected_stop_type = match stop_type {
             SyscallStopType::Enter => SyscallStopType::Exit,
             SyscallStopType::Exit => SyscallStopType::Enter,
         };
     }
 
-    pub fn is_entry(&self, syscall_id: u64) -> bool {
+    pub(crate) fn is_entry(&self, syscall_id: u64) -> bool {
         match self.expected_stop_type {
             SyscallStopType::Enter => true,
             SyscallStopType::Exit => {
@@ -117,7 +117,7 @@ impl TraceProcess {
     }
 
     /// Deletes stored info for the file descriptors that are marked as close-on-exec
-    pub fn clear_closed_fds(&mut self) {
+    pub(crate) fn clear_closed_fds(&mut self) {
         let mut fds_to_remove = Vec::new();
         for (fd, fd_data) in &self.fd_map {
             if fd_data.is_close_on_exec() {
@@ -129,11 +129,11 @@ impl TraceProcess {
         }
     }
 
-    pub fn set_cwd(&mut self, cwd: String) {
+    pub(crate) fn set_cwd(&mut self, cwd: String) {
         self.cwd = cwd;
     }
 
-    pub fn get_cwd(&self) -> String {
+    pub(crate) fn get_cwd(&self) -> String {
         self.cwd.clone()
     }
 }

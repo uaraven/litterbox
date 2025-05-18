@@ -17,7 +17,7 @@ use std::ffi::c_long;
 use syscall_numbers::*;
 
 // const E_NO_SYS: u64 = (-(38i64)) as u64;
-pub fn syscall_parser(id: u64) -> SyscallParserFn {
+pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
     let cid: c_long = id as i64;
     if cid < 0 {
         return parse_default;
