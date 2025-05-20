@@ -2,30 +2,14 @@ use std::collections::HashSet;
 
 use regex::Regex;
 use serde::Serialize;
-use syscall_numbers::native;
+use syscall_numbers::{native, x86_64};
 
 use crate::{
     scan_config::Config,
     syscall_args::SyscallArgument,
     syscall_common::{EXTRA_ADDR, EXTRA_PATHNAME},
     syscall_event::SyscallEvent,
-    syscall_ids::{SYS_OPEN, SYS_RMDIR},
 };
-
-const VERIFY_SYSCALLS: [i64; 12] = [
-    SYS_OPEN,
-    SYS_RMDIR,
-    native::SYS_openat,
-    native::SYS_read,
-    native::SYS_write,
-    native::SYS_unlinkat,
-    native::SYS_renameat,
-    native::SYS_renameat2,
-    native::SYS_connect,
-    native::SYS_accept,
-    native::SYS_execve,
-    native::SYS_execveat,
-];
 
 #[derive(Serialize, Clone, Debug)]
 pub enum ScanSafety {
@@ -87,15 +71,10 @@ impl ScanContext {
             dirs_safe_to_write.insert(dir.clone());
         }
 
-        let syscall_ids = VERIFY_SYSCALLS
-            .iter()
-            .map(|id| *id)
-            .collect::<HashSet<i64>>();
-
         ScanContext {
             home_dir,
             events: vec![],
-            syscalls: syscall_ids,
+            syscalls: HashSet::new(),
             primed: false,
             dirs_safe_to_read: dirs_safe_to_read
                 .iter()
@@ -210,22 +189,26 @@ impl ScanContext {
         }
     }
 
-    fn is_safe(&self, resource: String) -> bool {
+    fn is_safe(&self, _resource: String) -> bool {
         todo!()
     }
 }
 
 fn classify_syscall_type(syscall: &SyscallEvent) -> AccessType {
     let id = syscall.id as i64;
-    if id == SYS_RMDIR {
-        return AccessType::FileSystemWrite;
-    }
-    // if id == SYS_OPEN {
-    //     return AccessType::FileSystemRead;
-    // }
+    #[cfg(target_arch = "x86_64")]
     match id {
-        // native::SYS_openat => AccessType::FileSystemRead,
-        // native::SYS_openat2 => AccessType::FileSystemRead,
+        native::SYS_openat | native::SYS_openat2 | native::SYS_read => AccessType::FileSystemRead,
+        native::SYS_write | native::SYS_unlinkat | native::SYS_renameat | native::SYS_renameat2 => {
+            AccessType::FileSystemWrite
+        }
+        native::SYS_connect | native::SYS_accept => AccessType::Network,
+        native::SYS_execve | native::SYS_execveat => AccessType::Process,
+        _ => AccessType::Other,
+    }
+    #[cfg(target_arch = "aarch64")]
+    match id {
+        native::SYS_openat2 => AccessType::FileSystemRead,
         native::SYS_read => AccessType::FileSystemRead,
         native::SYS_write => AccessType::FileSystemWrite,
         native::SYS_unlinkat => AccessType::FileSystemWrite,

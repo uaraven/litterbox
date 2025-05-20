@@ -7,7 +7,7 @@ mod strace;
 mod syscall_args;
 mod syscall_common;
 mod syscall_event;
-mod syscall_ids;
+mod syscall_filter;
 mod syscall_parser;
 mod syscall_parsers_file;
 mod syscall_parsers_process;
