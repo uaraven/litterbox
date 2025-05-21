@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-use nix::libc::open_how;
+use nix::libc::{self, open_how};
 
 use crate::syscall_args::SyscallArgument;
 use crate::syscall_common::{EXTRA_PATHNAME, read_buffer_as_type, read_cstring};
+use crate::syscall_event::get_abs_filepath_from_extra;
 use crate::syscall_parsers_file::common::add_dirfd_extra;
 use crate::trace_process::TraceProcess;
 use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
@@ -23,7 +24,8 @@ pub(crate) fn parse_creat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
             pathname.clone(),
             mode,
         );
-        extra.insert(EXTRA_PATHNAME, pathname);
+        extra.insert(EXTRA_PATHNAME, pathname.clone());
+        proc.add_created_path(pathname.clone());
     }
     SyscallEvent::new_with_extras(
         proc,
@@ -53,7 +55,10 @@ pub(crate) fn parse_open(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
                 flags,
             );
         }
-        extra.insert(EXTRA_PATHNAME, pathname);
+        extra.insert(EXTRA_PATHNAME, pathname.clone());
+        if (flags as i32) & libc::O_CREAT != 0 {
+            proc.add_created_path(pathname.clone());
+        }
     }
     SyscallEvent::new_with_extras(
         proc,
@@ -82,9 +87,13 @@ pub(crate) fn parse_openat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent 
                 flags,
             );
         }
-        extra.insert(EXTRA_PATHNAME, pathname);
+        extra.insert(EXTRA_PATHNAME, pathname.clone());
     }
     add_dirfd_extra(proc, dirfd as i64, &mut extra);
+
+    if let Some(path) = get_abs_filepath_from_extra(&extra) {
+        proc.add_created_path(path);
+    }
 
     SyscallEvent::new_with_extras(
         proc,
@@ -123,6 +132,11 @@ pub(crate) fn parse_openat2(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent
         extra.insert(EXTRA_PATHNAME, pathname);
     }
     add_dirfd_extra(proc, dirfd as i64, &mut extra);
+
+    if let Some(path) = get_abs_filepath_from_extra(&extra) {
+        proc.add_created_path(path);
+    }
+
     SyscallEvent::new_with_extras(
         proc,
         Vec::from([

@@ -1,4 +1,7 @@
-use crate::syscall_event::{SyscallEvent, SyscallEventListener, SyscallStopType};
+use crate::{
+    syscall_event::{SyscallEvent, SyscallEventListener, SyscallStopType},
+    trace_process::TraceProcess,
+};
 #[cfg(target_arch = "aarch64")]
 use syscall_numbers::aarch64;
 #[cfg(target_arch = "x86_64")]
@@ -48,7 +51,11 @@ fn is_log_on_entry(syscall_id: i64) -> bool {
 pub struct SimpleLogger {}
 
 impl SyscallEventListener for SimpleLogger {
-    fn process_event(&mut self, event: &SyscallEvent) -> Option<SyscallEvent> {
+    fn process_event(
+        &mut self,
+        _proc: &TraceProcess,
+        event: &SyscallEvent,
+    ) -> Option<SyscallEvent> {
         if !is_loggable(event.id as i64) {
             return Some(event.clone());
         }

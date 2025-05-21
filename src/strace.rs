@@ -114,7 +114,7 @@ impl<F: SyscallEventListener> TraceContext<F> {
                         process.set_current_stop_type(syscall_event.stop_type);
 
                         if let Some(event_listener) = &mut self.listener {
-                            match event_listener.process_event(&syscall_event) {
+                            match event_listener.process_event(process, &syscall_event) {
                                 Some(new_event) => {
                                     process.set_last_syscall(&new_event);
                                 }

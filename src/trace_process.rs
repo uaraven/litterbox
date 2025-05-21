@@ -1,4 +1,7 @@
-use std::{collections::HashMap, env};
+use std::{
+    collections::{HashMap, HashSet},
+    env,
+};
 
 use nix::{libc, unistd::Pid};
 
@@ -18,6 +21,8 @@ pub(crate) struct FdData {
     pub value: String,
     // The flags which were used when opening the fd.
     pub flags: u64,
+
+    pub created_by_process: bool,
 }
 impl FdData {
     pub fn is_dir(&self) -> bool {
@@ -36,6 +41,7 @@ pub(crate) struct TraceProcess {
     expected_stop_type: SyscallStopType,
     cwd: String,
     fd_map: HashMap<i64, FdData>,
+    created_paths: HashSet<String>,
 }
 
 impl TraceProcess {
@@ -49,6 +55,7 @@ impl TraceProcess {
                 Err(_) => "".to_string(),
             },
             fd_map: HashMap::new(),
+            created_paths: HashSet::new(),
         }
     }
 
@@ -61,6 +68,7 @@ impl TraceProcess {
             last_syscall: SyscallEvent::fake_event(),
             expected_stop_type: SyscallStopType::Enter,
             fd_map: other.fd_map.clone(),
+            created_paths: other.created_paths.clone(),
         }
     }
 
@@ -83,15 +91,34 @@ impl TraceProcess {
     }
 
     pub(crate) fn add_fd(&mut self, fd: i64, name: &'static str, value: String, flags: u64) {
-        self.fd_map.insert(fd, FdData { name, value, flags });
+        self.fd_map.insert(
+            fd,
+            FdData {
+                name,
+                value,
+                flags,
+                created_by_process: (flags as i32) & libc::O_CREAT != 0,
+            },
+        );
     }
-
     pub(crate) fn get_fd(&self, fd: i64) -> Option<&FdData> {
         self.fd_map.get(&fd)
     }
 
     pub(crate) fn remove_fd(&mut self, fd: i64) {
         self.fd_map.remove(&fd);
+    }
+
+    pub(crate) fn add_created_path(&mut self, path: String) {
+        self.created_paths.insert(path);
+    }
+
+    pub(crate) fn is_created_by_process(&self, path: &str) -> bool {
+        self.created_paths.contains(path)
+    }
+
+    pub(crate) fn remove_created_path(&mut self, path: &String) {
+        self.created_paths.remove(path);
     }
 
     pub(crate) fn set_current_stop_type(&mut self, stop_type: SyscallStopType) {

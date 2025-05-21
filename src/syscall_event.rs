@@ -1,6 +1,6 @@
 use crate::regs::Regs;
 use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::get_syscall_name;
+use crate::syscall_common::{EXTRA_CWD, EXTRA_DIRFD, EXTRA_PATHNAME, get_syscall_name};
 use crate::syscall_parser::syscall_parser;
 use crate::trace_process::TraceProcess;
 use nix::libc::{self, user_regs_struct};
@@ -8,11 +8,37 @@ use nix::sys::ptrace;
 use nix::unistd::Pid;
 use std::collections::HashMap;
 use std::ffi::c_void;
+use std::path::PathBuf;
 
 use nix::errno::Errno;
 use std::fmt;
 
 pub type ExtraData = HashMap<&'static str, String>;
+
+/// returns the absolute path of the file, if available in the event's extras
+/// This function will check if the event originates from a *at syscall, and if so,
+/// it'll use the dirfd to resolve the absolute path of the file.
+pub(crate) fn get_abs_filepath_from_extra(extra: &ExtraData) -> Option<String> {
+    let pathname = match extra.get(EXTRA_PATHNAME) {
+        Some(pathname) => pathname,
+        None => return None,
+    };
+    let dir = match extra.get(EXTRA_DIRFD) {
+        Some(pathname) => pathname,
+        None => match extra.get(EXTRA_CWD) {
+            Some(pathname) => pathname,
+            None => "",
+        },
+    };
+    let mut abs_path = PathBuf::new();
+    if !dir.is_empty() {
+        abs_path.push(dir);
+    }
+    if !pathname.is_empty() {
+        abs_path.push(pathname);
+    }
+    Some(abs_path.to_string_lossy().to_string())
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum SyscallStopType {
@@ -31,6 +57,7 @@ pub struct SyscallEvent {
     pub stop_type: SyscallStopType,
     pub extra_context: ExtraData,
     pub blocked: bool,
+    pub label: Option<String>,
 }
 
 impl SyscallEvent {
@@ -51,6 +78,7 @@ impl SyscallEvent {
             },
             extra_context: Default::default(),
             blocked: false,
+            label: None,
         }
     }
     pub fn new_with_extras(
@@ -75,6 +103,7 @@ impl SyscallEvent {
             },
             extra_context: extras,
             blocked: false,
+            label: None,
         }
     }
     pub fn fake_event() -> SyscallEvent {
@@ -88,6 +117,7 @@ impl SyscallEvent {
             stop_type: SyscallStopType::Enter,
             extra_context: HashMap::new(),
             blocked: false,
+            label: None,
         }
     }
 
@@ -171,7 +201,15 @@ impl SyscallEvent {
         Errno::result(res)?;
         Ok(())
     }
+
+    /// returns the absolute path of the file, if available in the event's extras
+    /// This function will check if the event originates from a *at syscall, and if so,
+    /// it'll use the dirfd to resolve the absolute path of the file.
+    pub fn get_abs_filepath(&self) -> Option<String> {
+        get_abs_filepath_from_extra(&self.extra_context)
+    }
 }
+
 impl fmt::Display for SyscallEvent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut content = String::new();
@@ -201,5 +239,5 @@ impl fmt::Display for SyscallEvent {
 }
 
 pub trait SyscallEventListener {
-    fn process_event(&mut self, event: &SyscallEvent) -> Option<SyscallEvent>;
+    fn process_event(&mut self, proc: &TraceProcess, event: &SyscallEvent) -> Option<SyscallEvent>;
 }
