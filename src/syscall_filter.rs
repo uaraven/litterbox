@@ -7,7 +7,7 @@ use crate::syscall_event::SyscallEvent;
 
 pub(crate) enum FilterAction {
     Process,
-    Block { error: i32 },
+    Block(i32),
     Ignore,
 }
 
@@ -19,10 +19,10 @@ pub(crate) enum FilterAction {
 /// Filter must specify the action to take when a syscall matches.
 /// The default action is to block the syscall and return -ENOSYS.
 pub(crate) struct SyscallFilter {
-    syscall: i64,
-    args: HashMap<u8, u64>,
-    extras: HashMap<String, Regex>,
-    action: FilterAction,
+    pub syscall: i64,
+    pub args: HashMap<u8, u64>,
+    pub extras: HashMap<String, Regex>,
+    pub action: FilterAction,
 }
 
 impl SyscallFilter {

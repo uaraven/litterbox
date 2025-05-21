@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use crate::syscall_filter::SyscallFilter;
+
 pub struct TriggerEvent {
     pub syscall_name: String,
     pub file_path: Option<String>,
@@ -17,4 +21,10 @@ pub struct Config {
     pub allow_exec_from: Vec<String>,
 
     pub trace_syscalls: Vec<String>,
+}
+
+impl Config {
+    pub fn convert_to_filters(&self) -> HashMap<u64, SyscallFilter> {
+        
+    }
 }

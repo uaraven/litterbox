@@ -1,4 +1,5 @@
 mod fd_utils;
+mod filter_listener;
 mod regs;
 mod scan_config;
 mod scan_events;
