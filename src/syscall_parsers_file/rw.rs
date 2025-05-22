@@ -7,6 +7,7 @@ use crate::syscall_parsers_file::common::add_fd_filepath;
 use crate::trace_process::TraceProcess;
 use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
 
+use super::common::add_dirfd_extra;
 
 // ssize_t write(int fd, const void buf[.count], size_t count);
 pub(crate) fn parse_write(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
@@ -66,6 +67,21 @@ pub(crate) fn parse_read(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     )
 }
 
+#[cfg(target_arch = "x86_64")]
+// int chmod(const char *path, mode_t mode);
+pub(crate) fn parse_chmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let is_entry = proc.is_entry(regs.syscall_id);
+    let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[0] as usize) {
+        Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
+        Err(_) => ("".to_string(), SyscallArgument::Ptr(regs.regs[0])),
+    };
+    if !is_entry {
+        proc.set_cwd(pathname.clone());
+    }
+    SyscallEvent::new_with_extras(proc, Vec::from([pathname_arg]), &regs, Default::default())
+}
+
+// int fchmod(int fd, mode_t mode);
 pub(crate) fn parse_fchmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let mut extras: ExtraData = HashMap::new();
@@ -80,24 +96,61 @@ pub(crate) fn parse_fchmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent 
     )
 }
 
+// int fchmodat(int dirfd, const char *pathname, mode_t mode, int flags);
+pub(crate) fn parse_fchmodat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let is_entry = proc.is_entry(regs.syscall_id);
+    let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[1] as usize) {
+        Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
+        Err(_) => ("".to_string(), SyscallArgument::Ptr(regs.regs[1])),
+    };
+    let dirfd = regs.regs[0];
+    let flags = regs.regs[2];
+    let mut extra: ExtraData = HashMap::new();
+    if !pathname.is_empty() {
+        if !is_entry {
+            proc.add_fd(
+                regs.return_value as i64,
+                EXTRA_PATHNAME,
+                pathname.clone(),
+                flags,
+            );
+        }
+        extra.insert(EXTRA_PATHNAME, pathname.clone());
+    }
+    add_dirfd_extra(proc, dirfd as i64, &mut extra);
+
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([
+            SyscallArgument::DirFd(dirfd),
+            pathname_arg,
+            SyscallArgument::Int(flags),
+        ]),
+        &regs,
+        extra,
+    )
+}
+
+// int chdir(const char *path);
 pub(crate) fn parse_chdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[1] as usize) {
         Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
         Err(_) => ("".to_string(), SyscallArgument::Ptr(regs.regs[1])),
     };
-    if !is_entry {
+    if !is_entry && regs.return_value == 0 {
         proc.set_cwd(pathname.clone());
     }
     SyscallEvent::new_with_extras(proc, Vec::from([pathname_arg]), &regs, Default::default())
 }
 
+// int fchdir(int fd);
 pub(crate) fn parse_fchdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let fd = regs.regs[0] as i64;
     let mut extras = HashMap::<&str, String>::new();
     if let Some(fd_data) = proc.get_fd(fd) {
-        if !is_entry && fd > 0 {
+        if !is_entry && fd > 0 && regs.return_value == 0 {
             proc.set_cwd(fd_data.value.clone());
         }
     }

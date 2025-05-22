@@ -26,6 +26,8 @@ use syscall_numbers::*;
 // const E_NO_SYS: u64 = (-(38i64)) as u64;
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
+    use crate::syscall_parsers_file::rw::parse_fchmodat;
+
     let cid: c_long = id as i64;
     if cid < 0 {
         return parse_default;
@@ -37,6 +39,7 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         aarch64::SYS_write => parse_write,
         aarch64::SYS_read => parse_read,
         aarch64::SYS_fchmod => parse_fchmod,
+        aarch64::SYS_fchmodat => parse_fchmodat,
         aarch64::SYS_chdir => parse_chdir,
         aarch64::SYS_fchdir => parse_fchdir,
         aarch64::SYS_unlinkat => parse_unlinkat,
@@ -60,13 +63,16 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         return parse_default;
     }
     match cid {
+        x86_64::SYS_creat => parse_creat,
         x86_64::SYS_open => parse_open,
         x86_64::SYS_openat => parse_openat,
         x86_64::SYS_openat2 => parse_openat2,
         x86_64::SYS_close => parse_close,
         x86_64::SYS_write => parse_write,
         x86_64::SYS_read => parse_read,
+        x86_64::SYS_chmod => parse_fchmod,
         x86_64::SYS_fchmod => parse_fchmod,
+        x86_64::SYS_fchmodat => parse_fchmodat,
         x86_64::SYS_chdir => parse_chdir,
         x86_64::SYS_fchdir => parse_fchdir,
         x86_64::SYS_unlink | x86_64::SYS_rmdir => parse_unlink_rmdir,
@@ -78,7 +84,6 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         x86_64::SYS_connect => parse_connect,
         x86_64::SYS_bind => parse_bind,
         x86_64::SYS_listen => parse_listen,
-        x86_64::SYS_recv => parse_recv,
         x86_64::SYS_recvfrom => parse_recvfrom,
         x86_64::SYS_recvmsg => parse_recvmsg,
         _ => parse_default,

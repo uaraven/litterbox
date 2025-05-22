@@ -2,15 +2,13 @@ use crate::regs::Regs;
 use crate::syscall_args::SyscallArgument;
 use crate::syscall_common::{EXTRA_CWD, EXTRA_DIRFD, EXTRA_PATHNAME, get_syscall_name};
 use crate::syscall_parser::syscall_parser;
-use crate::trace_process::TraceProcess;
+use crate::trace_process::{SetSyscallId, TraceProcess, set_syscall_id};
 use nix::libc::{self, user_regs_struct};
 use nix::sys::ptrace;
 use nix::unistd::Pid;
 use std::collections::HashMap;
-use std::ffi::c_void;
 use std::path::PathBuf;
 
-use nix::errno::Errno;
 use std::fmt;
 
 pub type ExtraData = HashMap<&'static str, String>;
@@ -50,6 +48,7 @@ pub enum SyscallStopType {
 pub struct SyscallEvent {
     pub id: u64,
     pub name: String,
+    pub set_syscall_id: SetSyscallId,
     pub pid: i32,
     pub arguments: Vec<SyscallArgument>,
     pub regs: Regs,
@@ -67,6 +66,7 @@ impl SyscallEvent {
         SyscallEvent {
             id: regs.syscall_id,
             name: syscall_name,
+            set_syscall_id: proc.set_syscall_id,
             pid: proc.get_pid().as_raw().into(),
             arguments: arguments,
             regs: regs.clone(),
@@ -92,6 +92,7 @@ impl SyscallEvent {
         SyscallEvent {
             id: regs.syscall_id,
             name: syscall_name,
+            set_syscall_id: proc.set_syscall_id,
             pid: proc.get_pid().as_raw().into(),
             arguments: arguments,
             regs: regs.clone(),
@@ -106,10 +107,11 @@ impl SyscallEvent {
             label: None,
         }
     }
-    pub fn fake_event() -> SyscallEvent {
+    pub fn empty_event() -> SyscallEvent {
         SyscallEvent {
             id: 0xffff_ffff_ffff_ffff,
             name: String::new(),
+            set_syscall_id: set_syscall_id,
             pid: 0,
             arguments: Vec::new(),
             regs: Regs::default(),
@@ -133,7 +135,7 @@ impl SyscallEvent {
                 let arch_regs = self.regs.to_regs();
                 // let's set the syscall ID to -1
                 if let Err(e) =
-                    self.set_syscall_id(Pid::from_raw(self.pid), arch_regs, 0xffff_ffff_ffff_ffff)
+                    (self.set_syscall_id)(Pid::from_raw(self.pid), arch_regs, 0xffff_ffff_ffff_ffff)
                 {
                     eprintln!("Error setting registers: {}", e);
                     return self.clone();
@@ -162,46 +164,6 @@ impl SyscallEvent {
         }
     }
 
-    #[cfg(target_arch = "x86_64")]
-    fn set_syscall_id(
-        &self,
-        pid: Pid,
-        arch_regs: user_regs_struct,
-        syscall_id: u64,
-    ) -> Result<(), nix::Error> {
-        let mut regs = arch_regs;
-        regs.orig_rax = syscall_id;
-        ptrace::setregs(pid, regs)
-    }
-
-    /// On ARM64, we need to set the syscall ID in a different way, we use different register set, NT_ARM_SYSTEM_CALL
-    /// to set the syscall ID. Usual ptrace::setregs will not work.
-    #[cfg(target_arch = "aarch64")]
-    fn set_syscall_id(
-        &self,
-        pid: Pid,
-        _arch_regs: user_regs_struct,
-        syscall_id: u64,
-    ) -> Result<(), nix::Error> {
-        const PTRACE_SETREGSET: usize = 0x4205;
-        const NT_ARM_SYSTEM_CALL: usize = 0x404;
-
-        let regs = libc::iovec {
-            iov_base: &syscall_id as *const _ as *mut c_void,
-            iov_len: std::mem::size_of_val(&syscall_id),
-        };
-        let res = unsafe {
-            libc::ptrace(
-                PTRACE_SETREGSET as _,
-                libc::pid_t::from(pid.as_raw()),
-                NT_ARM_SYSTEM_CALL,
-                &regs as *const _ as *const c_void,
-            )
-        };
-        Errno::result(res)?;
-        Ok(())
-    }
-
     /// returns the absolute path of the file, if available in the event's extras
     /// This function will check if the event originates from a *at syscall, and if so,
     /// it'll use the dirfd to resolve the absolute path of the file.
@@ -213,10 +175,15 @@ impl SyscallEvent {
 impl fmt::Display for SyscallEvent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut content = String::new();
-        content.push_str(&format!("[{}] {} ({}) (", self.pid, self.name, self.id));
+        content.push_str(&format!("[{}] {} ({})", self.pid, self.name, self.id));
+        if self.label.is_some() {
+            content.push_str(&format!(" |{}|", self.label.as_ref().unwrap()));
+        }
+        content.push_str(" (");
         for arg in &self.arguments {
             content.push_str(&format!("{},", arg));
         }
+
         if self.arguments.len() > 0 {
             content.pop(); // Remove the last comma
         }

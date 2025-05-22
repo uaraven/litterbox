@@ -3,7 +3,13 @@ use std::{
     env,
 };
 
-use nix::{libc, unistd::Pid};
+use nix::{
+    errno::Errno,
+    libc::{self, user_regs_struct},
+    unistd::Pid,
+};
+
+use std::ffi::c_void;
 
 use crate::syscall_event::{SyscallEvent, SyscallStopType};
 
@@ -21,8 +27,6 @@ pub(crate) struct FdData {
     pub value: String,
     // The flags which were used when opening the fd.
     pub flags: u64,
-
-    pub created_by_process: bool,
 }
 impl FdData {
     pub fn is_dir(&self) -> bool {
@@ -33,6 +37,45 @@ impl FdData {
         self.flags as i32 & libc::O_CLOEXEC == libc::O_CLOEXEC
     }
 }
+pub(crate) type SetSyscallId = fn(Pid, user_regs_struct, u64) -> Result<(), nix::Error>;
+
+#[cfg(target_arch = "x86_64")]
+pub fn set_syscall_id(
+    pid: Pid,
+    arch_regs: user_regs_struct,
+    syscall_id: u64,
+) -> Result<(), nix::Error> {
+    let mut regs = arch_regs;
+    regs.orig_rax = syscall_id;
+    ptrace::setregs(pid, regs)
+}
+
+/// On ARM64, we need to set the syscall ID in a different way, we use different register set, NT_ARM_SYSTEM_CALL
+/// to set the syscall ID. Usual ptrace::setregs will not work.
+#[cfg(target_arch = "aarch64")]
+pub fn set_syscall_id(
+    pid: Pid,
+    _arch_regs: user_regs_struct,
+    new_syscall_id: u64,
+) -> Result<(), nix::Error> {
+    const PTRACE_SETREGSET: usize = 0x4205;
+    const NT_ARM_SYSTEM_CALL: usize = 0x404;
+
+    let regs = libc::iovec {
+        iov_base: &new_syscall_id as *const _ as *mut c_void,
+        iov_len: std::mem::size_of_val(&new_syscall_id),
+    };
+    let res = unsafe {
+        libc::ptrace(
+            PTRACE_SETREGSET as _,
+            libc::pid_t::from(pid.as_raw()),
+            NT_ARM_SYSTEM_CALL,
+            &regs as *const _ as *const c_void,
+        )
+    };
+    Errno::result(res)?;
+    Ok(())
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct TraceProcess {
@@ -42,13 +85,14 @@ pub(crate) struct TraceProcess {
     cwd: String,
     fd_map: HashMap<i64, FdData>,
     created_paths: HashSet<String>,
+    pub set_syscall_id: SetSyscallId,
 }
 
 impl TraceProcess {
     pub(crate) fn new(pid: Pid) -> Self {
         Self {
             pid,
-            last_syscall: SyscallEvent::fake_event(),
+            last_syscall: SyscallEvent::empty_event(),
             expected_stop_type: SyscallStopType::Enter,
             cwd: match env::current_dir() {
                 Ok(path) => path.to_string_lossy().to_string(),
@@ -56,6 +100,7 @@ impl TraceProcess {
             },
             fd_map: HashMap::new(),
             created_paths: HashSet::new(),
+            set_syscall_id: set_syscall_id,
         }
     }
 
@@ -65,10 +110,11 @@ impl TraceProcess {
         Self {
             pid: new_pid,
             cwd: other.cwd.clone(),
-            last_syscall: SyscallEvent::fake_event(),
+            last_syscall: SyscallEvent::empty_event(),
             expected_stop_type: SyscallStopType::Enter,
             fd_map: other.fd_map.clone(),
             created_paths: other.created_paths.clone(),
+            set_syscall_id: other.set_syscall_id,
         }
     }
 
@@ -91,15 +137,7 @@ impl TraceProcess {
     }
 
     pub(crate) fn add_fd(&mut self, fd: i64, name: &'static str, value: String, flags: u64) {
-        self.fd_map.insert(
-            fd,
-            FdData {
-                name,
-                value,
-                flags,
-                created_by_process: (flags as i32) & libc::O_CREAT != 0,
-            },
-        );
+        self.fd_map.insert(fd, FdData { name, value, flags });
     }
     pub(crate) fn get_fd(&self, fd: i64) -> Option<&FdData> {
         self.fd_map.get(&fd)

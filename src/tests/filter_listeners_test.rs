@@ -1,0 +1,143 @@
+use std::collections::HashMap;
+
+use nix::libc::user_regs_struct;
+use nix::unistd::Pid;
+
+use crate::filter_listener::{FilteringLogger, SyscallFilterTrigger};
+use crate::regs::Regs;
+use crate::syscall_event::{SyscallEvent, SyscallEventListener, SyscallStopType};
+use crate::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter};
+use crate::trace_process::TraceProcess;
+
+fn fake_syscall_id(_pid: Pid, _regs: user_regs_struct, _new_id: u64) -> Result<(), nix::Error> {
+    return Ok(());
+}
+
+fn make_test_event(id: u64, extra_path: Option<&str>) -> SyscallEvent {
+    let mut extra_context: HashMap<&'static str, String> = HashMap::new();
+    if let Some(path) = extra_path {
+        extra_context.insert(crate::syscall_common::EXTRA_PATHNAME, path.to_string());
+    }
+    SyscallEvent {
+        id,
+        name: "syscall_name".to_string(),
+        pid: 1000,
+        set_syscall_id: fake_syscall_id,
+        arguments: Default::default(),
+        regs: Regs::default(),
+        return_value: 0,
+        stop_type: SyscallStopType::Enter,
+        extra_context: extra_context,
+        blocked: false,
+        label: None,
+    }
+}
+
+#[test]
+fn test_default_filtering_logger_primed() {
+    let mut logger = FilteringLogger::default();
+    let proc = TraceProcess::new(Pid::from_raw(1000));
+    let event = make_test_event(0, None);
+    assert!(logger.primed);
+    let result = logger.process_event(&proc, &event);
+    assert!(result.is_some());
+    assert!(logger.primed)
+}
+
+#[test]
+fn test_trigger_event_blocks_until_primed() {
+    let trigger = SyscallFilterTrigger {
+        syscall_id: 42,
+        file_path: Some("/tmp/trigger".to_string()),
+    };
+    let mut logger = FilteringLogger::new(vec![], Some(trigger));
+    let proc = TraceProcess::new(Pid::from_raw(1000));
+
+    // Not primed, wrong syscall
+    let event = make_test_event(1, Some("/tmp/trigger"));
+    let result = logger.process_event(&proc, &event);
+    assert!(result.is_some());
+    assert!(!logger.primed);
+
+    // Not primed, right syscall but wrong path
+    let event = make_test_event(42, Some("/wrong/path"));
+    let result = logger.process_event(&proc, &event);
+    assert!(result.is_some());
+    assert!(!logger.primed);
+
+    // Priming event
+    let event = make_test_event(42, Some("/tmp/trigger"));
+    let result = logger.process_event(&proc, &event);
+    assert!(result.is_some());
+    assert!(logger.primed);
+
+    // Now primed, all events go through filters
+    let event = make_test_event(1, None);
+    let result = logger.process_event(&proc, &event);
+    assert!(result.is_some());
+}
+
+#[test]
+fn test_filtering_logger_with_custom_filter() {
+    let filter = SyscallFilter {
+        syscall: 123,
+        args: Default::default(),
+        match_path_created_by_process: false,
+        addr: None,
+        path: None,
+        outcome: FilterOutcome {
+            action: FilterAction::Block(1),
+            log: false,
+            tag: Some("blocked".to_string()),
+        },
+    };
+    let mut logger = FilteringLogger::new(vec![filter], None);
+    let proc = TraceProcess::new(Pid::from_raw(1000));
+    let event = make_test_event(123, None);
+    let result = logger.process_event(&proc, &event).unwrap();
+    assert_eq!(result.label, Some("blocked".to_string()));
+    assert!(result.blocked);
+}
+
+#[test]
+fn test_filtering_logger_default_filters() {
+    let filter = SyscallFilter {
+        syscall: -1,
+        outcome: FilterOutcome {
+            action: FilterAction::Allow,
+            log: true,
+            tag: Some("allowed".to_string()),
+        },
+        args: Default::default(),
+        match_path_created_by_process: false,
+        path: None,
+        addr: None,
+    };
+    let mut logger = FilteringLogger::new(vec![filter], None);
+    let proc = TraceProcess::new(Pid::from_raw(1000));
+    let event = make_test_event(999, None);
+    let result = logger.process_event(&proc, &event).unwrap();
+    assert_eq!(result.label, Some("allowed".to_string()));
+    assert!(!result.blocked);
+}
+
+#[test]
+fn test_handle_filter_non_matching() {
+    let filter = SyscallFilter {
+        syscall: 123,
+        outcome: FilterOutcome {
+            action: FilterAction::Block(1),
+            log: false,
+            tag: None,
+        },
+        args: Default::default(),
+        match_path_created_by_process: false,
+        path: None,
+        addr: None,
+    };
+    let mut logger = FilteringLogger::new(vec![filter], None);
+    let proc = TraceProcess::new(Pid::from_raw(1000));
+    let event = make_test_event(456, None);
+    let result = logger.process_event(&proc, &event).unwrap();
+    assert_eq!(result.label, None);
+}

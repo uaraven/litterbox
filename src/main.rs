@@ -13,9 +13,11 @@ mod syscall_parsers_process;
 mod syscall_parsers_socket;
 mod trace_process;
 
+mod tests;
+
+use filter_listener::FilteringLogger;
 use nix::sys::ptrace;
 use nix::unistd::{ForkResult, fork};
-use simple_logger::SimpleLogger;
 
 use std::env;
 
@@ -46,7 +48,10 @@ fn main() {
         Ok(ForkResult::Parent { child }) => {
             let pid = std::process::id();
             println!("Parent process PID: {}", pid);
-            let mut tracer = strace::TraceContext::new(child, Some(SimpleLogger {}));
+
+            let logger = FilteringLogger::default();
+
+            let mut tracer = strace::TraceContext::new(child, Some(logger));
 
             tracer.trace_process();
         }
