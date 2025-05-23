@@ -1,11 +1,18 @@
 use std::collections::HashMap;
+use std::hash::Hash;
+use std::vec;
 
 use nix::libc::user_regs_struct;
 use nix::unistd::Pid;
+use regex::Regex;
+use syscall_numbers::native;
 
-use crate::filter_listener::{FilteringLogger, SyscallFilterTrigger};
+use crate::FilteringLogger;
+use crate::filter_listener::SyscallFilterTrigger;
 use crate::regs::Regs;
-use crate::syscall_event::{SyscallEvent, SyscallEventListener, SyscallStopType};
+use crate::syscall_common::EXTRA_FLAGS;
+use crate::syscall_event::SyscallEventListener;
+use crate::syscall_event::{SyscallEvent, SyscallStopType};
 use crate::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter};
 use crate::trace_process::TraceProcess;
 
@@ -83,8 +90,7 @@ fn test_filtering_logger_with_custom_filter() {
         syscall: 123,
         args: Default::default(),
         match_path_created_by_process: false,
-        addr: None,
-        path: None,
+        extras: Default::default(),
         outcome: FilterOutcome {
             action: FilterAction::Block(1),
             log: false,
@@ -110,8 +116,7 @@ fn test_filtering_logger_default_filters() {
         },
         args: Default::default(),
         match_path_created_by_process: false,
-        path: None,
-        addr: None,
+        extras: Default::default(),
     };
     let mut logger = FilteringLogger::new(vec![filter], None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
@@ -132,12 +137,65 @@ fn test_handle_filter_non_matching() {
         },
         args: Default::default(),
         match_path_created_by_process: false,
-        path: None,
-        addr: None,
+        extras: Default::default(),
     };
     let mut logger = FilteringLogger::new(vec![filter], None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
     let event = make_test_event(456, None);
     let result = logger.process_event(&proc, &event).unwrap();
+    assert_eq!(result.label, None);
+}
+
+#[test]
+fn test_handle_filter_matching_by_flag() {
+    let mut filter_extras: HashMap<String, Regex> = HashMap::new();
+    filter_extras.insert(EXTRA_FLAGS.to_string(), Regex::new(".*O_CREAT.*").unwrap());
+    let filter = SyscallFilter {
+        syscall: native::SYS_openat,
+        outcome: FilterOutcome {
+            action: FilterAction::Block(1),
+            log: false,
+            tag: Some("blocked".to_string()),
+        },
+        args: Default::default(),
+        match_path_created_by_process: false,
+        extras: filter_extras,
+    };
+    let mut logger = FilteringLogger::new(vec![filter], None);
+    let proc = TraceProcess::new(Pid::from_raw(1000));
+    let mut extra_context: HashMap<&'static str, String> = HashMap::new();
+    extra_context.insert(EXTRA_FLAGS, "O_CREAT|O_RDONLY".to_string());
+    let bad_event = SyscallEvent {
+        id: native::SYS_openat as u64,
+        name: "openat".to_string(),
+        pid: 1000,
+        set_syscall_id: fake_syscall_id,
+        arguments: vec![],
+        regs: Regs::default(),
+        return_value: 0,
+        stop_type: SyscallStopType::Enter,
+        extra_context: extra_context,
+        blocked: false,
+        label: None,
+    };
+    let result = logger.process_event(&proc, &bad_event).unwrap();
+    assert_eq!(result.label, Some("blocked".to_string()));
+
+    let mut extra_context: HashMap<&'static str, String> = HashMap::new();
+    extra_context.insert(EXTRA_FLAGS, "O_RDONLY".to_string());
+    let good_event = SyscallEvent {
+        id: native::SYS_openat as u64,
+        name: "openat".to_string(),
+        pid: 1000,
+        set_syscall_id: fake_syscall_id,
+        arguments: vec![],
+        regs: Regs::default(),
+        return_value: 0,
+        stop_type: SyscallStopType::Enter,
+        extra_context: extra_context,
+        blocked: false,
+        label: None,
+    };
+    let result = logger.process_event(&proc, &good_event).unwrap();
     assert_eq!(result.label, None);
 }

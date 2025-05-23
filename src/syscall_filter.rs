@@ -6,7 +6,11 @@ use std::{
 use nix::libc;
 use regex::Regex;
 
-use crate::{syscall_common::EXTRA_ADDR, syscall_event::SyscallEvent, trace_process::TraceProcess};
+use crate::{
+    syscall_common::{EXTRA_ADDR, EXTRA_PATHNAME},
+    syscall_event::SyscallEvent,
+    trace_process::TraceProcess,
+};
 
 const MAX_ARGS: u8 = 6;
 pub(crate) enum FilterAction {
@@ -46,8 +50,7 @@ pub(crate) struct SyscallFilter {
     pub syscall: i64,
     pub args: HashMap<u8, HashSet<u64>>,
     pub match_path_created_by_process: bool,
-    pub path: Option<Regex>,
-    pub addr: Option<Regex>,
+    pub extras: HashMap<String, Regex>,
     pub outcome: FilterOutcome,
 }
 
@@ -62,8 +65,7 @@ impl SyscallFilter {
         Self {
             syscall,
             args,
-            path: None,
-            addr: None,
+            extras: HashMap::new(),
             match_path_created_by_process: false,
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
@@ -77,8 +79,7 @@ impl SyscallFilter {
         Self {
             syscall,
             args: HashMap::new(),
-            path: None,
-            addr: None,
+            extras: HashMap::new(),
             match_path_created_by_process: false,
             outcome: FilterOutcome {
                 action: FilterAction::Block(libc::ENOSYS),
@@ -100,29 +101,19 @@ impl SyscallFilter {
             }
         }
 
-        if let Some(path) = &self.path {
-            if let Some(syscall_abs_path) = syscall.get_abs_filepath() {
-                if !path.is_match(&syscall_abs_path) {
-                    // path doesn't match
+        for (key, regex) in &self.extras {
+            if let Some(value) = syscall.extra_context.get(key.as_str()) {
+                if !regex.is_match(value) {
                     return false;
-                } else {
-                    // if we only interested in the paths that were created by this process
-                    // and this path was not created by this process, then we don't want to match
-                    if self.match_path_created_by_process
-                        && !proc.is_created_by_process(&syscall_abs_path)
-                    {
-                        return false;
-                    }
-                }
-            }
-        }
-
-        if let Some(addr) = &self.addr {
-            if let Some(syscall_addr) = syscall.extra_context.get(EXTRA_ADDR) {
-                if !addr.is_match(&syscall_addr) {
-                    // addr doesn't match
+                } else if *key == EXTRA_PATHNAME.to_string()
+                    && self.match_path_created_by_process
+                    && !proc.is_created_by_process(value)
+                {
                     return false;
                 }
+            } else {
+                // if the key is not present in the syscall's extras, we don't match
+                return false;
             }
         }
 

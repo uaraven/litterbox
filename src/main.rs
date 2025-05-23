@@ -1,5 +1,6 @@
 mod fd_utils;
 mod filter_listener;
+mod flags;
 mod regs;
 mod simple_logger;
 mod strace;
@@ -12,6 +13,8 @@ mod syscall_parsers_file;
 mod syscall_parsers_process;
 mod syscall_parsers_socket;
 mod trace_process;
+
+mod preconfigured;
 
 mod tests;
 

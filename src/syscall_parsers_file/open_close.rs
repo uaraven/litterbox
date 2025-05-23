@@ -2,8 +2,9 @@ use std::collections::HashMap;
 
 use nix::libc::{self, open_how};
 
+use crate::flags::open_flags_to_str;
 use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::{EXTRA_PATHNAME, read_buffer_as_type, read_cstring};
+use crate::syscall_common::{EXTRA_FLAGS, EXTRA_PATHNAME, read_buffer_as_type, read_cstring};
 use crate::syscall_event::get_abs_filepath_from_extra;
 use crate::syscall_parsers_file::common::add_dirfd_extra;
 use crate::trace_process::TraceProcess;
@@ -55,6 +56,7 @@ pub(crate) fn parse_open(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
                 flags,
             );
         }
+        extra.insert(EXTRA_FLAGS, open_flags_to_str(flags));
         extra.insert(EXTRA_PATHNAME, pathname.clone());
         if (flags as i32) & libc::O_CREAT != 0 {
             proc.add_created_path(pathname.clone());

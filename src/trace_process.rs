@@ -52,7 +52,7 @@ pub fn set_syscall_id(
     ptrace::setregs(pid, regs)
 }
 
-/// On ARM64, we need to set the syscall ID in a different way, we use different register set, NT_ARM_SYSTEM_CALL
+/// On ARM64, we need to use different register set, NT_ARM_SYSTEM_CALL,
 /// to set the syscall ID. Usual ptrace::setregs will not work.
 #[cfg(target_arch = "aarch64")]
 pub fn set_syscall_id(
