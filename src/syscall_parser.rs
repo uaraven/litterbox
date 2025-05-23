@@ -4,6 +4,7 @@ use crate::syscall_common::SyscallParserFn;
 use crate::syscall_event::SyscallEvent;
 use crate::syscall_parsers_file::delete::parse_unlinkat;
 use crate::syscall_parsers_file::open_close::{parse_close, parse_openat, parse_openat2};
+use crate::syscall_parsers_file::rw::parse_fchmodat;
 use crate::syscall_parsers_file::rw::{
     parse_chdir, parse_fchdir, parse_fchmod, parse_read, parse_write,
 };
@@ -11,14 +12,15 @@ use crate::syscall_parsers_process::{parse_clone, parse_clone3, parse_execve, pa
 use crate::syscall_parsers_socket::{
     parse_bind, parse_connect, parse_listen, parse_recvfrom, parse_recvmsg,
 };
+
 use crate::trace_process::TraceProcess;
 
 #[cfg(target_arch = "x86_64")]
 use crate::syscall_parsers_file::delete::parse_unlink_rmdir;
 #[cfg(target_arch = "x86_64")]
 use crate::syscall_parsers_file::open_close::{parse_creat, parse_open};
-#[cfg(target_arch = "x86_64")]
-use crate::syscall_parsers_socket::parse_recv;
+// #[cfg(target_arch = "x86_64")]
+// use crate::syscall_parsers_socket::parse_recv;
 
 use std::ffi::c_long;
 use syscall_numbers::*;
@@ -26,8 +28,6 @@ use syscall_numbers::*;
 // const E_NO_SYS: u64 = (-(38i64)) as u64;
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
-    use crate::syscall_parsers_file::rw::parse_fchmodat;
-
     let cid: c_long = id as i64;
     if cid < 0 {
         return parse_default;

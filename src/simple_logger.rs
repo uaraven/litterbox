@@ -26,7 +26,7 @@ const LOGGABLE_SYSCALLS: [i64; 10] = [
 ]; // Example syscall IDs
 
 #[cfg(target_arch = "x86_64")]
-const LOGGABLE_SYSCALLS: [i64; 10] = [
+const LOGGABLE_SYSCALLS: [i64; 11] = [
     x86_64::SYS_open,
     x86_64::SYS_openat,
     x86_64::SYS_write,

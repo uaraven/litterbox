@@ -45,6 +45,8 @@ pub fn set_syscall_id(
     arch_regs: user_regs_struct,
     syscall_id: u64,
 ) -> Result<(), nix::Error> {
+    use nix::sys::ptrace;
+
     let mut regs = arch_regs;
     regs.orig_rax = syscall_id;
     ptrace::setregs(pid, regs)
