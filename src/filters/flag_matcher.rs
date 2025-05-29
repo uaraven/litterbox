@@ -1,5 +1,6 @@
 use super::matcher::StrMatcher;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FlagMatcher {
     flags: Vec<String>,
 }

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use syscall_numbers::native;
 
 use crate::{
@@ -7,108 +5,94 @@ use crate::{
     syscall_filter::{FilterOutcome, SyscallFilter},
 };
 
-// fn get_allowed_paths() -> Vec<String> {
-//     let home = std::env::var("HOME")
-//         .ok()
-//         .map(|path| std::path::PathBuf::from(&path))
-//         .or_else(|| std::env::current_dir().ok())
-//         .map(|path| path.canonicalize().unwrap())
-//         .unwrap()
-//         .to_string_lossy()
-//         .to_string();
-//     let allowed_paths = vec![
-//         "/tmp/.*".to_string(),
-//         "/var/tmp/.*".to_string(),
-//         format!("{}.*", home),
-//     ];
-//     allowed_paths
-// }
+fn get_allowed_paths() -> Vec<String> {
+    let home = std::env::var("HOME")
+        .ok()
+        .map(|path| std::path::PathBuf::from(&path))
+        .or_else(|| std::env::current_dir().ok())
+        .map(|path| path.canonicalize().unwrap())
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+    let allowed_paths = vec![
+        "/tmp/".to_string(),
+        "/var/tmp/".to_string(),
+        home.clone(),
+        home,
+    ];
+    allowed_paths
+}
 
-// #[cfg(target_arch = "aarch64")]
-// pub(crate) fn default_filters() -> FilteringLogger {
-//     use crate::syscall_filter::ExtraParameter;
+#[cfg(target_arch = "aarch64")]
+pub(crate) fn default_filters() -> FilteringLogger {
+    use crate::filters::utils::group_filters_by_syscall;
 
-//     let allowed_path_list = get_allowed_paths();
-//     let allowed_path_pattern = allowed_path_list
-//         .iter()
-//         .map(|p| regex::escape(p))
-//         .map(|p| format!("({})", p))
-//         .collect::<Vec<_>>()
-//         .join("|");
+    let allowed_path_list = get_allowed_paths();
 
-//     let filtered_syscalls = vec![
-//         SyscallFilter::new_stdio_allow(native::SYS_write),
-//         SyscallFilter::allow(native::SYS_write, allowed_path_list),
-//         SyscallFilter::with_extras(
-//             native::SYS_openat,
-//             true,
-//             &[
-//                 &ExtraParameter {
-//                     name: crate::syscall_common::EXTRA_FLAGS,
-//                     value: ".*O_CREAT.*".to_string(),
-//                 },
-//                 &ExtraParameter {
-//                     name: crate::syscall_common::EXTRA_PATHNAME,
-//                     value: allowed_path_pattern,
-//                 },
-//             ],
-//         ),
-//         SyscallFilter::block(native::SYS_write),
-//         SyscallFilter::block(native::SYS_writev),
-//         SyscallFilter::block(native::SYS_pwritev),
-//         SyscallFilter::block(native::SYS_pwritev2),
-//         SyscallFilter::block(native::SYS_pwrite64),
-//         SyscallFilter::block(native::SYS_unlinkat),
-//         SyscallFilter::block(native::SYS_mknodat),
-//         SyscallFilter::block(native::SYS_mkdirat),
-//         SyscallFilter::block(native::SYS_chroot),
-//         SyscallFilter::block(native::SYS_linkat),
-//         SyscallFilter::block(native::SYS_symlinkat),
-//         SyscallFilter::block(native::SYS_setxattr),
-//         SyscallFilter::block(native::SYS_fsetxattr),
-//         SyscallFilter::block(native::SYS_removexattr),
-//         SyscallFilter::block(native::SYS_fremovexattr),
-//         SyscallFilter::block(native::SYS_sendfile),
-//         SyscallFilter::block(native::SYS_io_setup),
-//         SyscallFilter::block(native::SYS_fchmod),
-//         SyscallFilter::block(native::SYS_fchmodat),
-//         SyscallFilter::block(native::SYS_fchmodat2),
-//         SyscallFilter::block(native::SYS_fchown),
-//         SyscallFilter::block(native::SYS_fchownat),
-//         SyscallFilter::block(native::SYS_execve),
-//         SyscallFilter::block(native::SYS_execveat),
-//         SyscallFilter::block(native::SYS_connect),
-//         SyscallFilter::block(native::SYS_listen),
-//         SyscallFilter::block(native::SYS_recvfrom),
-//         SyscallFilter::block(native::SYS_recvmmsg),
-//         SyscallFilter::block(native::SYS_recvmsg),
-//         SyscallFilter::block(native::SYS_sendto),
-//         SyscallFilter::block(native::SYS_sendmsg),
-//         SyscallFilter::block(native::SYS_sendmmsg),
-//     ];
+    let filtered_syscalls = vec![
+        SyscallFilter::stdio_allow(native::SYS_write),
+        SyscallFilter::allow(native::SYS_write, &allowed_path_list),
+        SyscallFilter::with_paths_and_flags(
+            native::SYS_openat,
+            true,
+            &allowed_path_list,
+            crate::filters::path_matcher::PathMatchOp::Prefix,
+            &vec![String::from("O_CREAT")],
+        ),
+        SyscallFilter::block(native::SYS_write),
+        SyscallFilter::block(native::SYS_writev),
+        SyscallFilter::block(native::SYS_pwritev),
+        SyscallFilter::block(native::SYS_pwritev2),
+        SyscallFilter::block(native::SYS_pwrite64),
+        SyscallFilter::block(native::SYS_unlinkat),
+        SyscallFilter::block(native::SYS_mknodat),
+        SyscallFilter::block(native::SYS_mkdirat),
+        SyscallFilter::block(native::SYS_chroot),
+        SyscallFilter::block(native::SYS_linkat),
+        SyscallFilter::block(native::SYS_symlinkat),
+        SyscallFilter::block(native::SYS_setxattr),
+        SyscallFilter::block(native::SYS_fsetxattr),
+        SyscallFilter::block(native::SYS_removexattr),
+        SyscallFilter::block(native::SYS_fremovexattr),
+        SyscallFilter::block(native::SYS_sendfile),
+        SyscallFilter::block(native::SYS_io_setup),
+        SyscallFilter::block(native::SYS_fchmod),
+        SyscallFilter::block(native::SYS_fchmodat),
+        SyscallFilter::block(native::SYS_fchmodat2),
+        SyscallFilter::block(native::SYS_fchown),
+        SyscallFilter::block(native::SYS_fchownat),
+        SyscallFilter::block(native::SYS_execve),
+        SyscallFilter::block(native::SYS_execveat),
+        SyscallFilter::block(native::SYS_connect),
+        SyscallFilter::block(native::SYS_listen),
+        SyscallFilter::block(native::SYS_recvfrom),
+        SyscallFilter::block(native::SYS_recvmmsg),
+        SyscallFilter::block(native::SYS_recvmsg),
+        SyscallFilter::block(native::SYS_sendto),
+        SyscallFilter::block(native::SYS_sendmsg),
+        SyscallFilter::block(native::SYS_sendmmsg),
+    ];
 
-//     let filter_map: HashMap<u64, Vec<SyscallFilter>> = filtered_syscalls
-//         .into_iter()
-//         .map(|filter| (filter.syscall as u64, vec![filter]))
-//         .collect();
+    let filter_map = group_filters_by_syscall(filtered_syscalls);
 
-//     FilteringLogger {
-//         primed: true,
-//         trigger_event: None,
-//         filters: filter_map,
-//         default_filters: vec![SyscallFilter {
-//             syscall: -1,
-//             match_path_created_by_process: true,
-//             args: Default::default(),
-//             extras: Default::default(),
-//             outcome: FilterOutcome {
-//                 action: crate::syscall_filter::FilterAction::Allow,
-//                 log: true,
-//                 tag: None,
-//             },
-//         }],
-//     }
-// }
+    FilteringLogger {
+        primed: true,
+        trigger_event: None,
+        filters: filter_map,
+        default_filters: vec![SyscallFilter {
+            syscall: -1,
+            match_path_created_by_process: true,
+            args: Default::default(),
+            path_matcher: None,
+            flag_matcher: None,
+            outcome: FilterOutcome {
+                action: crate::syscall_filter::FilterAction::Allow,
+                log: true,
+                tag: None,
+            },
+        }],
+    }
+}
 
 /// This function returns a restrictive filtering logger.
 /// It blocks all syscalls except for a few allowed ones.

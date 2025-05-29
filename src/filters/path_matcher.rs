@@ -1,5 +1,6 @@
 use super::matcher::StrMatcher;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PathMatchOp {
     Exact,
     Prefix,
@@ -7,6 +8,7 @@ pub enum PathMatchOp {
     Contains,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PathMatcher {
     pub paths: Vec<String>,
     pub match_op: PathMatchOp,

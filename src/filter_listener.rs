@@ -104,18 +104,18 @@ fn blocked_syscalls() -> Vec<SyscallFilter> {
 #[cfg(target_arch = "aarch64")]
 fn allowed_syscalls() -> Vec<SyscallFilter> {
     vec![
-        SyscallFilter::new_stdio_allow(aarch64::SYS_recvfrom),
-        SyscallFilter::new_stdio_allow(aarch64::SYS_read),
-        SyscallFilter::new_stdio_allow(aarch64::SYS_readv),
-        SyscallFilter::new_stdio_allow(aarch64::SYS_preadv),
-        SyscallFilter::new_stdio_allow(aarch64::SYS_preadv2),
-        SyscallFilter::new_stdio_allow(aarch64::SYS_pread64),
-        SyscallFilter::new_stdio_allow(aarch64::SYS_sendto),
-        SyscallFilter::new_stdio_allow(aarch64::SYS_write),
-        SyscallFilter::new_stdio_allow(aarch64::SYS_writev),
-        SyscallFilter::new_stdio_allow(aarch64::SYS_pwritev),
-        SyscallFilter::new_stdio_allow(aarch64::SYS_pwritev2),
-        SyscallFilter::new_stdio_allow(aarch64::SYS_pwrite64),
+        SyscallFilter::stdio_allow(aarch64::SYS_recvfrom),
+        SyscallFilter::stdio_allow(aarch64::SYS_read),
+        SyscallFilter::stdio_allow(aarch64::SYS_readv),
+        SyscallFilter::stdio_allow(aarch64::SYS_preadv),
+        SyscallFilter::stdio_allow(aarch64::SYS_preadv2),
+        SyscallFilter::stdio_allow(aarch64::SYS_pread64),
+        SyscallFilter::stdio_allow(aarch64::SYS_sendto),
+        SyscallFilter::stdio_allow(aarch64::SYS_write),
+        SyscallFilter::stdio_allow(aarch64::SYS_writev),
+        SyscallFilter::stdio_allow(aarch64::SYS_pwritev),
+        SyscallFilter::stdio_allow(aarch64::SYS_pwritev2),
+        SyscallFilter::stdio_allow(aarch64::SYS_pwrite64),
     ]
 }
 

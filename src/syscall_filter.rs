@@ -18,11 +18,14 @@ use crate::{
 };
 
 const MAX_ARGS: u8 = 6;
+
+#[derive(Debug, Clone)]
 pub(crate) enum FilterAction {
     Block(i32),
     Allow,
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct FilterOutcome {
     pub action: FilterAction,
     pub tag: Option<String>,
@@ -51,6 +54,7 @@ pub(crate) struct ExtraMatcher {
 /// that can be matched using regex.
 /// Filter must specify the action to take when a syscall matches.
 /// The default action is to block the syscall and return -ENOSYS.
+#[derive(Debug, Clone)]
 pub(crate) struct SyscallFilter {
     pub syscall: i64,
     pub args: HashMap<u8, HashSet<u64>>,
@@ -61,7 +65,7 @@ pub(crate) struct SyscallFilter {
 }
 
 impl SyscallFilter {
-    pub fn new_stdio_allow(syscall: i64) -> Self {
+    pub fn stdio_allow(syscall: i64) -> Self {
         let mut args = HashMap::new();
         let mut arg_set = HashSet::new();
         arg_set.insert(0);
@@ -70,7 +74,7 @@ impl SyscallFilter {
         args.insert(0, arg_set);
         Self {
             syscall,
-            args,
+            args: args.clone(),
             path_matcher: None,
             flag_matcher: None,
             match_path_created_by_process: false,
@@ -82,11 +86,11 @@ impl SyscallFilter {
         }
     }
 
-    pub fn allow(syscall: i64, path: Vec<String>) -> Self {
+    pub fn allow(syscall: i64, path: &Vec<String>) -> Self {
         Self {
             syscall,
             args: HashMap::new(),
-            path_matcher: Some(PathMatcher::new(path, Prefix)),
+            path_matcher: Some(PathMatcher::new(path.clone(), Prefix)),
             flag_matcher: None,
             match_path_created_by_process: false,
             outcome: FilterOutcome {
@@ -109,6 +113,51 @@ impl SyscallFilter {
             args: HashMap::new(),
             path_matcher: Some(PathMatcher::new(path_list, path_match_op)),
             flag_matcher: None,
+            match_path_created_by_process: false,
+            outcome: FilterOutcome {
+                action: if allow {
+                    FilterAction::Allow
+                } else {
+                    FilterAction::Block(libc::ENOSYS)
+                },
+                tag: None,
+                log: true,
+            },
+        }
+    }
+
+    pub fn with_flags(syscall: i64, allow: bool, flags: &[&str]) -> Self {
+        let flag_list = flags.iter().map(|&s| s.to_string()).collect();
+        Self {
+            syscall,
+            args: HashMap::new(),
+            path_matcher: None,
+            flag_matcher: Some(FlagMatcher::new(flag_list)),
+            match_path_created_by_process: false,
+            outcome: FilterOutcome {
+                action: if allow {
+                    FilterAction::Allow
+                } else {
+                    FilterAction::Block(libc::ENOSYS)
+                },
+                tag: None,
+                log: true,
+            },
+        }
+    }
+
+    pub fn with_paths_and_flags(
+        syscall: i64,
+        allow: bool,
+        paths: &Vec<String>,
+        path_match_op: PathMatchOp,
+        flags: &Vec<String>,
+    ) -> Self {
+        Self {
+            syscall,
+            args: HashMap::new(),
+            path_matcher: Some(PathMatcher::new(paths.clone(), path_match_op)),
+            flag_matcher: Some(FlagMatcher::new(flags.clone())),
             match_path_created_by_process: false,
             outcome: FilterOutcome {
                 action: if allow {
