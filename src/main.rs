@@ -1,6 +1,8 @@
 mod fd_utils;
 mod filter_listener;
+mod filters;
 mod flags;
+mod preconfigured;
 mod regs;
 mod simple_logger;
 mod strace;
@@ -14,8 +16,6 @@ mod syscall_parsers_process;
 mod syscall_parsers_socket;
 mod trace_process;
 
-mod preconfigured;
-
 mod tests;
 
 use filter_listener::FilteringLogger;
@@ -26,6 +26,34 @@ use std::env;
 
 fn main() {
     let mut args = env::args().skip(1);
+
+    // let opt_cfgs = vec![
+    //     OptCfg::with([
+    //         names(&["filter", "f"]),
+    //         has_arg(true),
+    //         default(&["restrictive"]),
+    //         arg_in_help("<permissive|restrictive>"),
+    //         desc("This is description of foo-bar."),
+    //     ]),
+    //     OptCfg::with([
+    //         names(&["o", "output"]),
+    //         has_arg(true),
+    //         defaults(&["output.txt"]),
+    //         desc("File to which the syscalls will be logged"),
+    //         arg_in_help("<file_name>"),
+    //     ]),
+    // ];
+
+    // let cmd = match Cmd::new() {
+    //     Ok(cmd) => cmd,
+    //     Err(e) => {
+    //         eprintln!("Error parsing command line arguments: {}", e);
+    //         std::process::exit(1);
+    //     }
+    // };
+    // cmd.parse_args(&args, &opt_cfgs);
+    // let args = cmd.get_args();
+    // let opts = cmd.get_opts();
 
     // First argument is the program name to run
     let program = match args.next() {

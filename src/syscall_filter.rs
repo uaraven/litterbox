@@ -1,13 +1,18 @@
-use std::{
-    collections::{HashMap, HashSet},
-    path,
-};
+use std::collections::{HashMap, HashSet};
 
 use nix::libc;
 use regex::Regex;
 
 use crate::{
-    syscall_common::{EXTRA_ADDR, EXTRA_PATHNAME},
+    filters::{
+        flag_matcher::FlagMatcher,
+        matcher::StrMatcher,
+        path_matcher::{
+            PathMatchOp::{self, Prefix},
+            PathMatcher,
+        },
+    },
+    syscall_common::{EXTRA_FLAGS, EXTRA_PATHNAME},
     syscall_event::SyscallEvent,
     trace_process::TraceProcess,
 };
@@ -50,7 +55,8 @@ pub(crate) struct SyscallFilter {
     pub syscall: i64,
     pub args: HashMap<u8, HashSet<u64>>,
     pub match_path_created_by_process: bool,
-    pub extras: HashMap<String, Regex>,
+    pub path_matcher: Option<PathMatcher>,
+    pub flag_matcher: Option<FlagMatcher>,
     pub outcome: FilterOutcome,
 }
 
@@ -65,10 +71,51 @@ impl SyscallFilter {
         Self {
             syscall,
             args,
-            extras: HashMap::new(),
+            path_matcher: None,
+            flag_matcher: None,
             match_path_created_by_process: false,
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
+                tag: None,
+                log: true,
+            },
+        }
+    }
+
+    pub fn allow(syscall: i64, path: Vec<String>) -> Self {
+        Self {
+            syscall,
+            args: HashMap::new(),
+            path_matcher: Some(PathMatcher::new(path, Prefix)),
+            flag_matcher: None,
+            match_path_created_by_process: false,
+            outcome: FilterOutcome {
+                action: FilterAction::Allow,
+                tag: None,
+                log: true,
+            },
+        }
+    }
+
+    pub fn with_paths(
+        syscall: i64,
+        allow: bool,
+        paths: &[&str],
+        path_match_op: PathMatchOp,
+    ) -> Self {
+        let path_list = paths.iter().map(|&s| s.to_string()).collect();
+        Self {
+            syscall,
+            args: HashMap::new(),
+            path_matcher: Some(PathMatcher::new(path_list, path_match_op)),
+            flag_matcher: None,
+            match_path_created_by_process: false,
+            outcome: FilterOutcome {
+                action: if allow {
+                    FilterAction::Allow
+                } else {
+                    FilterAction::Block(libc::ENOSYS)
+                },
                 tag: None,
                 log: true,
             },
@@ -79,7 +126,8 @@ impl SyscallFilter {
         Self {
             syscall,
             args: HashMap::new(),
-            extras: HashMap::new(),
+            path_matcher: None,
+            flag_matcher: None,
             match_path_created_by_process: false,
             outcome: FilterOutcome {
                 action: FilterAction::Block(libc::ENOSYS),
@@ -101,19 +149,22 @@ impl SyscallFilter {
             }
         }
 
-        for (key, regex) in &self.extras {
-            if let Some(value) = syscall.extra_context.get(key.as_str()) {
-                if !regex.is_match(value) {
+        if let Some(ref path_matcher) = self.path_matcher {
+            if let Some(syscall_path) = syscall.extra_context.get(EXTRA_PATHNAME) {
+                if !path_matcher.matches(syscall_path) {
                     return false;
-                } else if *key == EXTRA_PATHNAME.to_string()
-                    && self.match_path_created_by_process
-                    && !proc.is_created_by_process(value)
+                } else if self.match_path_created_by_process
+                    && !proc.is_created_by_process(syscall_path)
                 {
                     return false;
                 }
-            } else {
-                // if the key is not present in the syscall's extras, we don't match
-                return false;
+            }
+        }
+        if let Some(ref flag_matcher) = self.flag_matcher {
+            if let Some(flags) = syscall.extra_context.get(EXTRA_FLAGS) {
+                if !flag_matcher.matches(flags) {
+                    return false;
+                }
             }
         }
 
