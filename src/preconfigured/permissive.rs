@@ -2,7 +2,7 @@ use std::vec;
 
 use crate::{
     FilteringLogger,
-    syscall_filter::{FilterOutcome, SyscallFilter},
+    filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter},
 };
 
 // This function returns a permissive filtering logger.
@@ -19,7 +19,7 @@ pub(crate) fn permissive_filters() -> FilteringLogger {
             path_matcher: None,
             flag_matcher: None,
             outcome: FilterOutcome {
-                action: crate::syscall_filter::FilterAction::Allow,
+                action: FilterAction::Allow,
                 log: true,
                 tag: None,
             },

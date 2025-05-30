@@ -13,7 +13,6 @@ pub(crate) const EXTRA_ADDR: &str = "addr";
 pub(crate) const EXTRA_FLAGS: &str = "flags";
 pub(crate) const EXTRA_CWD: &str = "cwd";
 pub(crate) const EXTRA_DIRFD: &str = "dirfd";
-pub(crate) const EXTRA_MOD: &str = "mod";
 
 pub(crate) const MAX_BUFFER_SIZE: usize = 32;
 

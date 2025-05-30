@@ -7,9 +7,9 @@ use syscall_numbers::aarch64;
 use syscall_numbers::x86_64;
 
 use crate::{
+    filters::syscall_filter::{FilterAction, SyscallFilter},
     syscall_common::EXTRA_PATHNAME,
     syscall_event::{SyscallEvent, SyscallEventListener},
-    syscall_filter::{FilterAction, SyscallFilter},
     trace_process::TraceProcess,
 };
 

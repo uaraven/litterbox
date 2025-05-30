@@ -2,7 +2,7 @@ use syscall_numbers::native;
 
 use crate::{
     FilteringLogger,
-    syscall_filter::{FilterOutcome, SyscallFilter},
+    filters::syscall_filter::{FilterOutcome, SyscallFilter},
 };
 
 /// This function returns a restrictive filtering logger.
@@ -10,7 +10,7 @@ use crate::{
 /// It also logs all syscalls.
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn restrictive_filters() -> FilteringLogger {
-    use crate::filters::utils::group_filters_by_syscall;
+    use crate::filters::{syscall_filter::FilterAction, utils::group_filters_by_syscall};
 
     let filtered_syscalls = vec![
         SyscallFilter::stdio_allow(native::SYS_write),
@@ -62,7 +62,7 @@ pub(crate) fn restrictive_filters() -> FilteringLogger {
             path_matcher: None,
             flag_matcher: None,
             outcome: FilterOutcome {
-                action: crate::syscall_filter::FilterAction::Allow,
+                action: FilterAction::Allow,
                 log: true,
                 tag: None,
             },

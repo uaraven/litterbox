@@ -2,7 +2,7 @@ use syscall_numbers::native;
 
 use crate::{
     FilteringLogger,
-    syscall_filter::{FilterOutcome, SyscallFilter},
+    filters::syscall_filter::{FilterOutcome, SyscallFilter},
 };
 
 fn get_allowed_paths() -> Vec<String> {
@@ -25,7 +25,7 @@ fn get_allowed_paths() -> Vec<String> {
 
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn default_filters() -> FilteringLogger {
-    use crate::filters::utils::group_filters_by_syscall;
+    use crate::filters::{syscall_filter::FilterAction, utils::group_filters_by_syscall};
 
     let allowed_path_list = get_allowed_paths();
 
@@ -86,7 +86,7 @@ pub(crate) fn default_filters() -> FilteringLogger {
             path_matcher: None,
             flag_matcher: None,
             outcome: FilterOutcome {
-                action: crate::syscall_filter::FilterAction::Allow,
+                action: FilterAction::Allow,
                 log: true,
                 tag: None,
             },

@@ -9,11 +9,11 @@ use crate::FilteringLogger;
 use crate::filter_listener::SyscallFilterTrigger;
 use crate::filters::flag_matcher::FlagMatcher;
 use crate::filters::path_matcher::{PathMatchOp, PathMatcher};
+use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter};
 use crate::regs::Regs;
 use crate::syscall_common::{EXTRA_FLAGS, EXTRA_PATHNAME};
 use crate::syscall_event::SyscallEventListener;
 use crate::syscall_event::{SyscallEvent, SyscallStopType};
-use crate::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter};
 use crate::trace_process::TraceProcess;
 
 fn fake_syscall_id(_pid: Pid, _regs: user_regs_struct, _new_id: u64) -> Result<(), nix::Error> {

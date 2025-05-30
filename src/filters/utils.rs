@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::syscall_filter::SyscallFilter;
+use crate::filters::syscall_filter::SyscallFilter;
 
 pub(crate) fn group_filters_by_syscall(
     filtered_syscalls: Vec<SyscallFilter>,
