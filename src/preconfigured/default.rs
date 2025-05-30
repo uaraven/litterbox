@@ -25,6 +25,8 @@ fn get_allowed_paths() -> Vec<String> {
 
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn default_filters() -> FilteringLogger {
+    use std::collections::HashSet;
+
     use crate::filters::{syscall_filter::FilterAction, utils::group_filters_by_syscall};
 
     let allowed_path_list = get_allowed_paths();
@@ -80,7 +82,7 @@ pub(crate) fn default_filters() -> FilteringLogger {
         trigger_event: None,
         filters: filter_map,
         default_filters: vec![SyscallFilter {
-            syscall: -1,
+            syscall: HashSet::new(),
             match_path_created_by_process: true,
             args: Default::default(),
             path_matcher: None,

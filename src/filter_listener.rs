@@ -136,14 +136,13 @@ impl FilteringLogger {
         let mut filter_map: HashMap<u64, Vec<SyscallFilter>> = HashMap::new();
         let mut defaults: Vec<SyscallFilter> = Vec::new();
         for filter in filters {
-            if filter.syscall == -1 {
+            if filter.syscall.is_empty() {
                 defaults.push(filter);
                 continue;
             } else {
-                filter_map
-                    .entry(filter.syscall as u64)
-                    .or_insert_with(Vec::new)
-                    .push(filter);
+                filter_map.extend(crate::filters::utils::group_filters_by_syscall(vec![
+                    filter,
+                ]));
             }
         }
         Self {

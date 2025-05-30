@@ -56,7 +56,7 @@ pub(crate) struct ExtraMatcher {
 /// The default action is to block the syscall and return -ENOSYS.
 #[derive(Debug, Clone)]
 pub(crate) struct SyscallFilter {
-    pub syscall: i64,
+    pub syscall: HashSet<i64>,
     pub args: HashMap<u8, HashSet<u64>>,
     pub match_path_created_by_process: bool,
     pub path_matcher: Option<PathMatcher>,
@@ -73,7 +73,7 @@ impl SyscallFilter {
         arg_set.insert(2);
         args.insert(0, arg_set);
         Self {
-            syscall,
+            syscall: [syscall].into(),
             args: args.clone(),
             path_matcher: None,
             flag_matcher: None,
@@ -88,7 +88,7 @@ impl SyscallFilter {
 
     pub fn allow(syscall: i64, path: &Vec<String>) -> Self {
         Self {
-            syscall,
+            syscall: [syscall].into(),
             args: HashMap::new(),
             path_matcher: Some(PathMatcher::new(path.clone(), Prefix)),
             flag_matcher: None,
@@ -109,7 +109,7 @@ impl SyscallFilter {
     ) -> Self {
         let path_list = paths.iter().map(|&s| s.to_string()).collect();
         Self {
-            syscall,
+            syscall: [syscall].into(),
             args: HashMap::new(),
             path_matcher: Some(PathMatcher::new(path_list, path_match_op)),
             flag_matcher: None,
@@ -129,7 +129,7 @@ impl SyscallFilter {
     pub fn with_flags(syscall: i64, allow: bool, flags: &[&str]) -> Self {
         let flag_list = flags.iter().map(|&s| s.to_string()).collect();
         Self {
-            syscall,
+            syscall: [syscall].into(),
             args: HashMap::new(),
             path_matcher: None,
             flag_matcher: Some(FlagMatcher::new(flag_list)),
@@ -154,7 +154,7 @@ impl SyscallFilter {
         flags: &Vec<String>,
     ) -> Self {
         Self {
-            syscall,
+            syscall: [syscall].into(),
             args: HashMap::new(),
             path_matcher: Some(PathMatcher::new(paths.clone(), path_match_op)),
             flag_matcher: Some(FlagMatcher::new(flags.clone())),
@@ -173,7 +173,7 @@ impl SyscallFilter {
 
     pub fn block(syscall: i64) -> Self {
         Self {
-            syscall,
+            syscall: [syscall].into(),
             args: HashMap::new(),
             path_matcher: None,
             flag_matcher: None,
@@ -187,7 +187,8 @@ impl SyscallFilter {
     }
 
     pub fn matches(&self, proc: &TraceProcess, syscall: &SyscallEvent) -> bool {
-        if self.syscall != -1 && syscall.id as i64 != self.syscall {
+        let syscall_id = syscall.id as i64;
+        if !(self.syscall.is_empty() && self.syscall.contains(&syscall_id)) {
             return false;
         }
         for (reg_idx, reg_value) in &self.args {

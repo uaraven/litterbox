@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use serde_json::json;
 
 use crate::filters::{
@@ -6,7 +8,7 @@ use crate::filters::{
 
 fn base_json() -> serde_json::Value {
     json!({
-        "syscall_id": 1,
+        "syscall_id": [1],
         "args": { "0": [1, 2], "1": [3] },
         "paths": ["/tmp/file", "/var/log"],
         "path_op": "exact",
@@ -27,7 +29,7 @@ fn test_from_json_success() {
     let dto = SyscallFilterDto::from_json(json_str);
     assert!(dto.is_ok());
     let dto = dto.unwrap();
-    assert_eq!(dto.syscall_id, 1);
+    assert_eq!(*dto.syscall_id.first().unwrap(), 1);
     assert_eq!(dto.paths.len(), 2);
     assert_eq!(dto.flags, vec!["O_RDONLY", "O_CREAT"]);
     assert!(dto.match_path_created_by_process);
@@ -108,7 +110,7 @@ fn test_to_syscall_filter_success() {
     let filter = dto.to_syscall_filter();
     assert!(filter.is_ok());
     let filter = filter.unwrap();
-    assert_eq!(filter.syscall, 1);
+    assert_eq!(filter.syscall.len(), 1);
     assert!(filter.path_matcher.is_some());
     assert!(filter.flag_matcher.is_some());
     assert!(filter.match_path_created_by_process);

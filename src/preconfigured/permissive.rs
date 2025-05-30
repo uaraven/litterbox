@@ -1,4 +1,4 @@
-use std::vec;
+use std::{collections::HashSet, vec};
 
 use crate::{
     FilteringLogger,
@@ -13,7 +13,7 @@ pub(crate) fn permissive_filters() -> FilteringLogger {
         trigger_event: None,
         filters: Default::default(),
         default_filters: vec![SyscallFilter {
-            syscall: -1,
+            syscall: HashSet::new(),
             match_path_created_by_process: false,
             args: Default::default(),
             path_matcher: None,

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::vec;
 
 use nix::libc::user_regs_struct;
@@ -87,7 +87,7 @@ fn test_trigger_event_blocks_until_primed() {
 #[test]
 fn test_filtering_logger_with_custom_filter() {
     let filter = SyscallFilter {
-        syscall: 123,
+        syscall: [123].into(),
         args: Default::default(),
         match_path_created_by_process: false,
         path_matcher: None,
@@ -109,7 +109,7 @@ fn test_filtering_logger_with_custom_filter() {
 #[test]
 fn test_filtering_logger_default_syscall_id_filters() {
     let filter = SyscallFilter {
-        syscall: -1,
+        syscall: HashSet::new(),
         outcome: FilterOutcome {
             action: FilterAction::Allow,
             log: true,
@@ -131,7 +131,7 @@ fn test_filtering_logger_default_syscall_id_filters() {
 #[test]
 fn test_handle_filter_non_matching() {
     let filter = SyscallFilter {
-        syscall: 123,
+        syscall: [123].into(),
         outcome: FilterOutcome {
             action: FilterAction::Block(1),
             log: false,
@@ -152,7 +152,7 @@ fn test_handle_filter_non_matching() {
 #[test]
 fn test_handle_filter_matching_by_flag() {
     let filter = SyscallFilter {
-        syscall: native::SYS_openat,
+        syscall: [native::SYS_openat].into(),
         outcome: FilterOutcome {
             action: FilterAction::Block(1),
             log: false,
@@ -205,7 +205,7 @@ fn test_handle_filter_matching_by_flag() {
 #[test]
 fn test_handle_filter_matching_by_path_prefix() {
     let filter = SyscallFilter {
-        syscall: native::SYS_openat,
+        syscall: [native::SYS_openat].into(),
         outcome: FilterOutcome {
             action: FilterAction::Block(1),
             log: false,

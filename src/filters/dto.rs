@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::Deserialize;
 
@@ -23,7 +23,7 @@ pub(crate) struct FilterOutcomeDto {
 
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct SyscallFilterDto {
-    pub syscall_id: i64,
+    pub syscall_id: Vec<i64>,
     pub args: HashMap<u8, Vec<u64>>,
     pub paths: Vec<String>,
     pub path_op: String,
@@ -78,7 +78,7 @@ impl SyscallFilterDto {
         let outcome_action = self.parse_outcome_action()?;
 
         Ok(SyscallFilter {
-            syscall: self.syscall_id,
+            syscall: self.syscall_id.iter().cloned().collect(),
             args: arg_map,
             path_matcher: if !self.paths.is_empty() {
                 Some(PathMatcher::new(self.paths.clone(), path_match_op))
