@@ -1,3 +1,4 @@
+#[cfg(test)]
 use crate::{
     syscall_event::{SyscallEvent, SyscallEventListener},
     trace_process::TraceProcess,

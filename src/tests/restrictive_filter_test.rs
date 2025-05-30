@@ -1,5 +1,7 @@
+#[cfg(test)]
 use syscall_numbers::native;
 
+#[cfg(test)]
 use crate::{
     regs::Regs,
     syscall_event::{SyscallEvent, SyscallEventListener},

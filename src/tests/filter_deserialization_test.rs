@@ -1,11 +1,11 @@
-use std::ops::Deref;
-
-use serde_json::json;
-
+#[cfg(test)]
 use crate::filters::{
     dto::SyscallFilterDto, path_matcher::PathMatchOp, syscall_filter::FilterAction,
 };
+#[cfg(test)]
+use serde_json::json;
 
+#[cfg(test)]
 fn base_json() -> serde_json::Value {
     json!({
         "syscall_id": [1],

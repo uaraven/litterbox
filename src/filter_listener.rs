@@ -132,6 +132,7 @@ impl FilteringLogger {
         }
     }
 
+    #[cfg(test)]
     pub fn new(filters: Vec<SyscallFilter>, trigger_event: Option<SyscallFilterTrigger>) -> Self {
         let mut filter_map: HashMap<u64, Vec<SyscallFilter>> = HashMap::new();
         let mut defaults: Vec<SyscallFilter> = Vec::new();
