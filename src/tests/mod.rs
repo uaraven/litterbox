@@ -1,3 +1,5 @@
+#[cfg(test)]
+pub mod custom_filter_tests;
 pub mod filter_deserialization_test;
 #[cfg(test)]
 pub mod filter_listeners_test;

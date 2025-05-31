@@ -5,7 +5,7 @@ what to do with the matching events.
 
 ```json
 {
-    "syscall": <int>,
+    "syscall": [<int>],
     "args": ???,
     "match_path_created_by_process": true|false,
     "path_matcher": {

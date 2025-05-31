@@ -187,7 +187,7 @@ impl SyscallFilter {
 
     pub fn matches(&self, proc: &TraceProcess, syscall: &SyscallEvent) -> bool {
         let syscall_id = syscall.id as i64;
-        if !(self.syscall.is_empty() && self.syscall.contains(&syscall_id)) {
+        if !self.syscall.is_empty() && !self.syscall.contains(&syscall_id) {
             return false;
         }
         for (reg_idx, reg_value) in &self.args {
@@ -203,7 +203,7 @@ impl SyscallFilter {
                 if !path_matcher.matches(syscall_path) {
                     return false;
                 } else if self.match_path_created_by_process
-                    && !proc.is_created_by_process(syscall_path)
+                    && proc.is_created_by_process(syscall_path)
                 {
                     return false;
                 }
