@@ -1,13 +1,8 @@
 use std::collections::HashMap;
 
-#[cfg(target_arch = "aarch64")]
-use syscall_numbers::aarch64;
-
-#[cfg(target_arch = "x86_64")]
-use syscall_numbers::x86_64;
-
 use crate::{
     filters::syscall_filter::{FilterAction, SyscallFilter},
+    preconfigured::default::default_filters,
     syscall_common::EXTRA_PATHNAME,
     syscall_event::{SyscallEvent, SyscallEventListener},
     trace_process::TraceProcess,
@@ -40,96 +35,9 @@ pub(crate) struct FilteringLogger {
     pub(crate) default_filters: Vec<SyscallFilter>,
 }
 
-#[cfg(target_arch = "x86_64")]
-fn blocked_syscalls() -> Vec<SyscallFilter> {
-    vec![
-        SyscallFilter::block(x86_64::SYS_execve),
-        SyscallFilter::block(x86_64::SYS_execveat),
-        SyscallFilter::block(x86_64::SYS_write),
-        SyscallFilter::block(x86_64::SYS_writev),
-        SyscallFilter::block(x86_64::SYS_pwritev),
-        SyscallFilter::block(x86_64::SYS_pwritev2),
-        SyscallFilter::block(x86_64::SYS_pwrite64),
-        SyscallFilter::block(x86_64::SYS_unlink),
-        SyscallFilter::block(x86_64::SYS_unlinkat),
-        SyscallFilter::block(x86_64::SYS_rmdir),
-        SyscallFilter::block(x86_64::SYS_chown),
-        SyscallFilter::block(x86_64::SYS_fchown),
-        SyscallFilter::block(x86_64::SYS_lchown),
-        SyscallFilter::block(x86_64::SYS_chmod),
-        SyscallFilter::block(x86_64::SYS_fchmod),
-        SyscallFilter::block(x86_64::SYS_fchmodat),
-        SyscallFilter::block(x86_64::SYS_fchmodat2),
-        SyscallFilter::block(x86_64::SYS_connect),
-        SyscallFilter::block(x86_64::SYS_listen),
-    ]
-}
-
-#[cfg(target_arch = "x86_64")]
-fn allowed_syscalls() -> Vec<SyscallFilter> {
-    vec![
-        SyscallFilter::new_stdio_allow(x86_64::SYS_read),
-        SyscallFilter::new_stdio_allow(x86_64::SYS_readv),
-        SyscallFilter::new_stdio_allow(x86_64::SYS_preadv),
-        SyscallFilter::new_stdio_allow(x86_64::SYS_preadv2),
-        SyscallFilter::new_stdio_allow(x86_64::SYS_pread64),
-        SyscallFilter::new_stdio_allow(x86_64::SYS_write),
-        SyscallFilter::new_stdio_allow(x86_64::SYS_writev),
-        SyscallFilter::new_stdio_allow(x86_64::SYS_pwritev),
-        SyscallFilter::new_stdio_allow(x86_64::SYS_pwritev2),
-        SyscallFilter::new_stdio_allow(x86_64::SYS_pwrite64),
-    ]
-}
-
-#[cfg(target_arch = "aarch64")]
-fn blocked_syscalls() -> Vec<SyscallFilter> {
-    vec![
-        SyscallFilter::block(aarch64::SYS_execve),
-        SyscallFilter::block(aarch64::SYS_execveat),
-        SyscallFilter::block(aarch64::SYS_write),
-        SyscallFilter::block(aarch64::SYS_writev),
-        SyscallFilter::block(aarch64::SYS_pwritev),
-        SyscallFilter::block(aarch64::SYS_pwritev2),
-        SyscallFilter::block(aarch64::SYS_pwrite64),
-        SyscallFilter::block(aarch64::SYS_unlinkat),
-        SyscallFilter::block(aarch64::SYS_fchown),
-        SyscallFilter::block(aarch64::SYS_fchmod),
-        SyscallFilter::block(aarch64::SYS_fchmodat),
-        SyscallFilter::block(aarch64::SYS_fchmodat2),
-        SyscallFilter::block(aarch64::SYS_connect),
-        SyscallFilter::block(aarch64::SYS_listen),
-    ]
-}
-
-#[cfg(target_arch = "aarch64")]
-fn allowed_syscalls() -> Vec<SyscallFilter> {
-    vec![
-        SyscallFilter::stdio_allow(aarch64::SYS_recvfrom),
-        SyscallFilter::stdio_allow(aarch64::SYS_read),
-        SyscallFilter::stdio_allow(aarch64::SYS_readv),
-        SyscallFilter::stdio_allow(aarch64::SYS_preadv),
-        SyscallFilter::stdio_allow(aarch64::SYS_preadv2),
-        SyscallFilter::stdio_allow(aarch64::SYS_pread64),
-        SyscallFilter::stdio_allow(aarch64::SYS_sendto),
-        SyscallFilter::stdio_allow(aarch64::SYS_write),
-        SyscallFilter::stdio_allow(aarch64::SYS_writev),
-        SyscallFilter::stdio_allow(aarch64::SYS_pwritev),
-        SyscallFilter::stdio_allow(aarch64::SYS_pwritev2),
-        SyscallFilter::stdio_allow(aarch64::SYS_pwrite64),
-    ]
-}
-
 impl FilteringLogger {
     pub fn default() -> Self {
-        let mut filters = Vec::new();
-        filters.extend(allowed_syscalls());
-        filters.extend(blocked_syscalls());
-        Self {
-            primed: true,
-            trigger_event: None,
-            filters: HashMap::new(),
-            default_filters: filters,
-        }
+        default_filters()
     }
 
     #[cfg(test)]

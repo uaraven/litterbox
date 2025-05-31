@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
 use nix::libc;
-use regex::Regex;
 
 use crate::{
     filters::{
@@ -25,6 +24,11 @@ pub(crate) enum FilterAction {
     Allow,
 }
 
+/// Filter outcome represents the action to take when a syscall matches a filter.
+/// It can either block the syscall (returning a specific error code)
+/// or allow it to proceed.
+/// The `tag` can be used to label the syscall for logging or further processing.
+/// The `log` field indicates whether the syscall should be logged when it matches the filter.
 #[derive(Debug, Clone)]
 pub(crate) struct FilterOutcome {
     pub action: FilterAction,
@@ -40,11 +44,6 @@ impl FilterOutcome {
             log: true,
         }
     }
-}
-
-pub(crate) struct ExtraMatcher {
-    pub match_created_by_process: bool,
-    pub extras: HashMap<String, Regex>,
 }
 
 /// Represents a filter for syscall events.
@@ -86,9 +85,9 @@ impl SyscallFilter {
         }
     }
 
-    pub fn allow(syscall: i64, path: &Vec<String>) -> Self {
+    pub fn allow(syscall: &[i64], path: &Vec<String>) -> Self {
         Self {
-            syscall: [syscall].into(),
+            syscall: syscall.iter().cloned().collect(),
             args: HashMap::new(),
             path_matcher: Some(PathMatcher::new(path.clone(), Prefix)),
             flag_matcher: None,
@@ -171,9 +170,9 @@ impl SyscallFilter {
         }
     }
 
-    pub fn block(syscall: i64) -> Self {
+    pub fn block(syscall: &[i64]) -> Self {
         Self {
-            syscall: [syscall].into(),
+            syscall: syscall.iter().cloned().collect(),
             args: HashMap::new(),
             path_matcher: None,
             flag_matcher: None,
