@@ -1,74 +1,36 @@
-use crate::{
-    syscall_event::{SyscallEvent, SyscallEventListener, SyscallStopType},
-    trace_process::TraceProcess,
-};
-#[cfg(target_arch = "aarch64")]
-use syscall_numbers::aarch64;
-#[cfg(target_arch = "x86_64")]
-use syscall_numbers::x86_64;
+use crate::syscall_event::{SyscallEvent, SyscallStopType};
 
-use syscall_numbers::native;
-
-const LOG_ON_ENTER: [i64; 2] = [native::SYS_execve, native::SYS_execveat]; // Example syscall IDs
-
-#[cfg(target_arch = "aarch64")]
-const LOGGABLE_SYSCALLS: [i64; 10] = [
-    aarch64::SYS_openat,
-    aarch64::SYS_write,
-    aarch64::SYS_read,
-    aarch64::SYS_clone,
-    aarch64::SYS_clone3,
-    aarch64::SYS_execve,
-    aarch64::SYS_execveat,
-    aarch64::SYS_socket,
-    aarch64::SYS_connect,
-    aarch64::SYS_listen,
-]; // Example syscall IDs
-
-#[cfg(target_arch = "x86_64")]
-const LOGGABLE_SYSCALLS: [i64; 11] = [
-    x86_64::SYS_open,
-    x86_64::SYS_openat,
-    x86_64::SYS_write,
-    x86_64::SYS_read,
-    x86_64::SYS_clone,
-    x86_64::SYS_clone3,
-    x86_64::SYS_execve,
-    x86_64::SYS_execveat,
-    x86_64::SYS_socket,
-    x86_64::SYS_connect,
-    x86_64::SYS_listen,
-]; // Example syscall IDs
-
-fn is_loggable(syscall_id: i64) -> bool {
-    LOGGABLE_SYSCALLS.contains(&syscall_id)
-}
-
-fn is_log_on_entry(syscall_id: i64) -> bool {
-    LOG_ON_ENTER.contains(&syscall_id)
-}
-
-pub struct SimpleLogger {}
-
-impl SyscallEventListener for SimpleLogger {
-    fn process_event(
-        &mut self,
-        _proc: &TraceProcess,
-        event: &SyscallEvent,
-    ) -> Option<SyscallEvent> {
-        if !is_loggable(event.id as i64) {
-            return Some(event.clone());
-        }
-        match event.stop_type {
-            SyscallStopType::Exit => {
-                println!("{}", event);
-            }
-            SyscallStopType::Enter => {
-                if is_log_on_entry(event.id as i64) {
-                    println!("{} ...", event);
-                }
-            }
-        }
-        return Some(event.clone());
+pub(crate) fn simple_logger(event: &SyscallEvent) {
+    let mut content = String::new();
+    content.push_str(&format!("[{}] {} ({})", event.pid, event.name, event.id));
+    if event.label.is_some() {
+        content.push_str(&format!(" |{}|", event.label.as_ref().unwrap()));
     }
+    content.push_str(" (");
+    for arg in &event.arguments {
+        content.push_str(&format!("{},", arg));
+    }
+
+    if event.arguments.len() > 0 {
+        content.pop(); // Remove the last comma
+    }
+    match event.stop_type {
+        SyscallStopType::Enter => {
+            if event.blocked {
+                content.push_str(") -> (!)")
+            } else {
+                content.push_str(")")
+            }
+        }
+        SyscallStopType::Exit => content.push_str(&format!(") -> {}", event.return_value as i64)),
+    }
+    if event.extra_context.len() > 0 {
+        content.push_str(" {");
+        for (key, value) in &event.extra_context {
+            content.push_str(&format!("{}: '{}',", key, value));
+        }
+        content.pop(); // Remove the last comma
+        content.push('}');
+    }
+    println!("{}", content);
 }

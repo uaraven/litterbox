@@ -58,7 +58,7 @@ impl SyscallFilterDto {
                     Ok(FilterAction::Block(error_code))
                 } else {
                     Err(ParsingError {
-                        message: "Block action requires a yscall error code".to_string(),
+                        message: "Block action requires a syscall error code".to_string(),
                     })
                 }
             }

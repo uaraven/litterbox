@@ -27,7 +27,10 @@ fn get_allowed_paths() -> Vec<String> {
 pub(crate) fn default_filters() -> FilteringLogger {
     use std::collections::HashSet;
 
-    use crate::filters::{syscall_filter::FilterAction, utils::group_filters_by_syscall};
+    use crate::{
+        filters::{syscall_filter::FilterAction, utils::group_filters_by_syscall},
+        simple_logger::simple_logger,
+    };
 
     let allowed_path_list = get_allowed_paths();
 
@@ -94,6 +97,7 @@ pub(crate) fn default_filters() -> FilteringLogger {
                 tag: None,
             },
         }],
+        logger: Some(simple_logger),
     }
 }
 

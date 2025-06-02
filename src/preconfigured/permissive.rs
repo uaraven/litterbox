@@ -3,6 +3,7 @@ use std::{collections::HashSet, vec};
 use crate::{
     FilteringLogger,
     filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter},
+    simple_logger::simple_logger,
 };
 
 // This function returns a permissive filtering logger.
@@ -23,5 +24,6 @@ pub(crate) fn permissive_filters() -> FilteringLogger {
                 tag: None,
             },
         }],
+        logger: Some(simple_logger),
     }
 }

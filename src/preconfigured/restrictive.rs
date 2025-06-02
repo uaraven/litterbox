@@ -12,7 +12,10 @@ use crate::{
 pub(crate) fn restrictive_filters() -> FilteringLogger {
     use std::collections::HashSet;
 
-    use crate::filters::{syscall_filter::FilterAction, utils::group_filters_by_syscall};
+    use crate::{
+        filters::{syscall_filter::FilterAction, utils::group_filters_by_syscall},
+        simple_logger::simple_logger,
+    };
 
     let filtered_syscalls = vec![
         SyscallFilter::stdio_allow(native::SYS_write),
@@ -70,6 +73,7 @@ pub(crate) fn restrictive_filters() -> FilteringLogger {
                 tag: None,
             },
         }],
+        logger: Some(simple_logger),
     }
 }
 

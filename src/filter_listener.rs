@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use crate::{
     filters::syscall_filter::{FilterAction, SyscallFilter},
+    filters::utils::group_filters_by_syscall,
     preconfigured::default::default_filters,
     syscall_common::EXTRA_PATHNAME,
     syscall_event::{SyscallEvent, SyscallEventListener},
+    syscall_logger::SyscallLogger,
     trace_process::TraceProcess,
 };
 
@@ -29,10 +31,11 @@ impl SyscallFilterTrigger {
 }
 
 pub(crate) struct FilteringLogger {
-    pub(crate) primed: bool,
-    pub(crate) trigger_event: Option<SyscallFilterTrigger>,
-    pub(crate) filters: HashMap<u64, Vec<SyscallFilter>>,
-    pub(crate) default_filters: Vec<SyscallFilter>,
+    pub primed: bool,
+    pub trigger_event: Option<SyscallFilterTrigger>,
+    pub filters: HashMap<u64, Vec<SyscallFilter>>,
+    pub default_filters: Vec<SyscallFilter>,
+    pub logger: Option<SyscallLogger>,
 }
 
 impl FilteringLogger {
@@ -41,7 +44,11 @@ impl FilteringLogger {
     }
 
     #[cfg(test)]
-    pub fn new(filters: Vec<SyscallFilter>, trigger_event: Option<SyscallFilterTrigger>) -> Self {
+    pub fn new(
+        filters: Vec<SyscallFilter>,
+        trigger_event: Option<SyscallFilterTrigger>,
+        logger: Option<SyscallLogger>,
+    ) -> Self {
         let mut filter_map: HashMap<u64, Vec<SyscallFilter>> = HashMap::new();
         let mut defaults: Vec<SyscallFilter> = Vec::new();
         for filter in filters {
@@ -49,9 +56,7 @@ impl FilteringLogger {
                 defaults.push(filter);
                 continue;
             } else {
-                filter_map.extend(crate::filters::utils::group_filters_by_syscall(vec![
-                    filter,
-                ]));
+                filter_map.extend(group_filters_by_syscall(vec![filter]));
             }
         }
         Self {
@@ -59,11 +64,14 @@ impl FilteringLogger {
             trigger_event,
             filters: filter_map,
             default_filters: defaults,
+            logger: logger,
         }
     }
 
     pub fn log_event(&self, event: &SyscallEvent) {
-        println!("{:?}", event);
+        if let Some(ref logger) = self.logger {
+            logger(event);
+        }
     }
 
     fn handle_filter(
