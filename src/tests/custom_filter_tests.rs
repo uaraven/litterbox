@@ -20,10 +20,10 @@ fn test_block_open_in_forbidden_folder() {
     let block_open = SyscallFilter {
         syscall: [native::SYS_write as i64].into(),
         args: Default::default(),
-        match_path_created_by_process: false,
         path_matcher: Some(PathMatcher::new(
             vec!["/forbidden_folder".to_string()],
             PathMatchOp::Prefix,
+            false,
         )),
         flag_matcher: None,
         outcome: FilterOutcome {
@@ -74,10 +74,10 @@ fn test_dont_block_open_in_non_forbidden_folder() {
     let block_open = SyscallFilter {
         syscall: [native::SYS_write as i64].into(),
         args: Default::default(),
-        match_path_created_by_process: false,
         path_matcher: Some(PathMatcher::new(
             vec!["/forbidden_folder".to_string()],
             PathMatchOp::Prefix,
+            false,
         )),
         flag_matcher: None,
         outcome: FilterOutcome {
@@ -127,10 +127,10 @@ fn test_dont_block_open_in_forbidden_folder_when_created_by_this_process() {
     let block_open = SyscallFilter {
         syscall: [native::SYS_write as i64].into(),
         args: Default::default(),
-        match_path_created_by_process: true,
         path_matcher: Some(PathMatcher::new(
             vec!["/forbidden_folder".to_string()],
             PathMatchOp::Prefix,
+            true,
         )),
         flag_matcher: None,
         outcome: FilterOutcome {

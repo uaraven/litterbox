@@ -12,11 +12,16 @@ pub enum PathMatchOp {
 pub struct PathMatcher {
     pub paths: Vec<String>,
     pub match_op: PathMatchOp,
+    pub only_created_by_process: bool,
 }
 
 impl PathMatcher {
-    pub fn new(paths: Vec<String>, match_op: PathMatchOp) -> Self {
-        Self { paths, match_op }
+    pub fn new(paths: Vec<String>, match_op: PathMatchOp, created_by_process: bool) -> Self {
+        Self {
+            paths,
+            match_op,
+            only_created_by_process: created_by_process,
+        }
     }
 }
 

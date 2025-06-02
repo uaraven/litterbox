@@ -8,7 +8,7 @@ use serde_json::json;
 #[cfg(test)]
 fn base_json() -> serde_json::Value {
     json!({
-        "syscall_id": [1],
+        "syscall_names": ["openat"],
         "args": { "0": [1, 2], "1": [3] },
         "paths": ["/tmp/file", "/var/log"],
         "path_op": "exact",
@@ -18,7 +18,7 @@ fn base_json() -> serde_json::Value {
             "tag": "test",
             "log": true,
             "action": "allow",
-            "replace_syscall_id": null
+            "block_syscall_error": null
         }
     })
 }
@@ -29,7 +29,7 @@ fn test_from_json_success() {
     let dto = SyscallFilterDto::from_json(json_str);
     assert!(dto.is_ok());
     let dto = dto.unwrap();
-    assert_eq!(*dto.syscall_id.first().unwrap(), 1);
+    assert_eq!(*dto.syscall_names.first().unwrap(), "openat");
     assert_eq!(dto.paths.len(), 2);
     assert_eq!(dto.flags, vec!["O_RDONLY", "O_CREAT"]);
     assert!(dto.match_path_created_by_process);
@@ -75,7 +75,7 @@ fn test_parse_outcome_action_allow() {
 fn test_parse_outcome_action_block_with_replace_id() {
     let mut json = base_json();
     json["outcome"]["action"] = json!("block");
-    json["outcome"]["replace_syscall_id"] = json!(42);
+    json["outcome"]["block_syscall_error"] = json!(42);
     let dto: SyscallFilterDto = serde_json::from_value(json).unwrap();
     let action = dto.parse_outcome_action().unwrap();
     assert!(matches!(action, FilterAction::Block(42)));
@@ -85,12 +85,12 @@ fn test_parse_outcome_action_block_with_replace_id() {
 fn test_parse_outcome_action_block_missing_replace_id() {
     let mut json = base_json();
     json["outcome"]["action"] = json!("block");
-    json["outcome"]["replace_syscall_id"] = serde_json::Value::Null;
+    json["outcome"]["block_syscall_error"] = serde_json::Value::Null;
     let dto: SyscallFilterDto = serde_json::from_value(json).unwrap();
     let err = dto.parse_outcome_action().unwrap_err();
     assert!(
         err.message
-            .contains("Block action requires a replace syscall ID")
+            .contains("Block action requires a syscall error code")
     );
 }
 
@@ -113,7 +113,7 @@ fn test_to_syscall_filter_success() {
     assert_eq!(filter.syscall.len(), 1);
     assert!(filter.path_matcher.is_some());
     assert!(filter.flag_matcher.is_some());
-    assert!(filter.match_path_created_by_process);
+    assert!(filter.path_matcher.unwrap().only_created_by_process);
     assert_eq!(filter.outcome.tag, Some("test".to_string()));
     assert!(filter.outcome.log);
 }

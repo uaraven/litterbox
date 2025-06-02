@@ -57,7 +57,6 @@ impl FilterOutcome {
 pub(crate) struct SyscallFilter {
     pub syscall: HashSet<i64>,
     pub args: HashMap<u8, HashSet<u64>>,
-    pub match_path_created_by_process: bool,
     pub path_matcher: Option<PathMatcher>,
     pub flag_matcher: Option<FlagMatcher>,
     pub outcome: FilterOutcome,
@@ -76,7 +75,6 @@ impl SyscallFilter {
             args: args.clone(),
             path_matcher: None,
             flag_matcher: None,
-            match_path_created_by_process: false,
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
                 tag: None,
@@ -89,9 +87,8 @@ impl SyscallFilter {
         Self {
             syscall: syscall.iter().cloned().collect(),
             args: HashMap::new(),
-            path_matcher: Some(PathMatcher::new(path.clone(), Prefix)),
+            path_matcher: Some(PathMatcher::new(path.clone(), Prefix, false)),
             flag_matcher: None,
-            match_path_created_by_process: false,
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
                 tag: None,
@@ -110,9 +107,8 @@ impl SyscallFilter {
         Self {
             syscall: [syscall].into(),
             args: HashMap::new(),
-            path_matcher: Some(PathMatcher::new(path_list, path_match_op)),
+            path_matcher: Some(PathMatcher::new(path_list, path_match_op, false)),
             flag_matcher: None,
-            match_path_created_by_process: false,
             outcome: FilterOutcome {
                 action: if allow {
                     FilterAction::Allow
@@ -132,7 +128,6 @@ impl SyscallFilter {
             args: HashMap::new(),
             path_matcher: None,
             flag_matcher: Some(FlagMatcher::new(flag_list)),
-            match_path_created_by_process: false,
             outcome: FilterOutcome {
                 action: if allow {
                     FilterAction::Allow
@@ -155,9 +150,8 @@ impl SyscallFilter {
         Self {
             syscall: [syscall].into(),
             args: HashMap::new(),
-            path_matcher: Some(PathMatcher::new(paths.clone(), path_match_op)),
+            path_matcher: Some(PathMatcher::new(paths.clone(), path_match_op, false)),
             flag_matcher: Some(FlagMatcher::new(flags.clone())),
-            match_path_created_by_process: false,
             outcome: FilterOutcome {
                 action: if allow {
                     FilterAction::Allow
@@ -176,7 +170,6 @@ impl SyscallFilter {
             args: HashMap::new(),
             path_matcher: None,
             flag_matcher: None,
-            match_path_created_by_process: false,
             outcome: FilterOutcome {
                 action: FilterAction::Block(libc::ENOSYS),
                 tag: None,
@@ -202,7 +195,7 @@ impl SyscallFilter {
             if let Some(syscall_path) = syscall.extra_context.get(EXTRA_PATHNAME) {
                 if !path_matcher.matches(syscall_path) {
                     return false;
-                } else if self.match_path_created_by_process
+                } else if path_matcher.only_created_by_process
                     && proc.is_created_by_process(syscall_path)
                 {
                     return false;

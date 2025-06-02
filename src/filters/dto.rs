@@ -6,6 +6,7 @@ use super::{
     flag_matcher::FlagMatcher,
     path_matcher::{PathMatchOp, PathMatcher},
     syscall_filter::{FilterAction, FilterOutcome, SyscallFilter},
+    utils::syscall_id_by_name,
 };
 
 #[derive(Debug)]
@@ -18,12 +19,12 @@ pub(crate) struct FilterOutcomeDto {
     pub tag: String,
     pub log: bool,
     pub action: String,
-    pub replace_syscall_id: Option<i32>,
+    pub block_syscall_error: Option<i32>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct SyscallFilterDto {
-    pub syscall_id: Vec<i64>,
+    pub syscall_names: Vec<String>,
     pub args: HashMap<u8, Vec<u64>>,
     pub paths: Vec<String>,
     pub path_op: String,
@@ -53,11 +54,11 @@ impl SyscallFilterDto {
         match self.outcome.action.as_str() {
             "allow" => Ok(FilterAction::Allow),
             "block" => {
-                if let Some(replace_id) = self.outcome.replace_syscall_id {
-                    Ok(FilterAction::Block(replace_id))
+                if let Some(error_code) = self.outcome.block_syscall_error {
+                    Ok(FilterAction::Block(error_code))
                 } else {
                     Err(ParsingError {
-                        message: "Block action requires a replace syscall ID".to_string(),
+                        message: "Block action requires a syscall error code".to_string(),
                     })
                 }
             }
@@ -68,6 +69,14 @@ impl SyscallFilterDto {
     }
 
     pub fn to_syscall_filter(&self) -> Result<SyscallFilter, ParsingError> {
+        let syscall_ids = self
+            .syscall_names
+            .iter()
+            .map(|f| syscall_id_by_name(f.as_str()))
+            .filter(|f| f.is_some())
+            .map(|f| f.unwrap() as i64)
+            .collect::<HashSet<_>>();
+
         let arg_map = self
             .args
             .iter()
@@ -78,10 +87,14 @@ impl SyscallFilterDto {
         let outcome_action = self.parse_outcome_action()?;
 
         Ok(SyscallFilter {
-            syscall: self.syscall_id.iter().cloned().collect(),
+            syscall: syscall_ids,
             args: arg_map,
             path_matcher: if !self.paths.is_empty() {
-                Some(PathMatcher::new(self.paths.clone(), path_match_op))
+                Some(PathMatcher::new(
+                    self.paths.clone(),
+                    path_match_op,
+                    self.match_path_created_by_process,
+                ))
             } else {
                 None
             },
@@ -90,7 +103,6 @@ impl SyscallFilterDto {
             } else {
                 None
             },
-            match_path_created_by_process: self.match_path_created_by_process,
             outcome: FilterOutcome {
                 action: outcome_action,
                 tag: if self.outcome.tag.is_empty() {

@@ -89,7 +89,6 @@ fn test_filtering_logger_with_custom_filter() {
     let filter = SyscallFilter {
         syscall: [123].into(),
         args: Default::default(),
-        match_path_created_by_process: false,
         path_matcher: None,
         flag_matcher: None,
         outcome: FilterOutcome {
@@ -116,7 +115,6 @@ fn test_filtering_logger_default_syscall_id_filters() {
             tag: Some("allowed".to_string()),
         },
         args: Default::default(),
-        match_path_created_by_process: false,
         path_matcher: None,
         flag_matcher: None,
     };
@@ -138,7 +136,6 @@ fn test_handle_filter_non_matching() {
             tag: None,
         },
         args: Default::default(),
-        match_path_created_by_process: false,
         path_matcher: None,
         flag_matcher: None,
     };
@@ -159,7 +156,6 @@ fn test_handle_filter_matching_by_flag() {
             tag: Some("blocked".to_string()),
         },
         args: Default::default(),
-        match_path_created_by_process: false,
         path_matcher: None,
         flag_matcher: Some(FlagMatcher::new(vec!["O_CREAT".to_string()])),
     };
@@ -212,10 +208,10 @@ fn test_handle_filter_matching_by_path_prefix() {
             tag: Some("blocked".to_string()),
         },
         args: Default::default(),
-        match_path_created_by_process: false,
         path_matcher: Some(PathMatcher::new(
             vec!["/tmp/".to_string()],
             PathMatchOp::Prefix,
+            false,
         )),
         flag_matcher: None,
     };

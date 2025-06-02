@@ -61,7 +61,6 @@ pub(crate) fn restrictive_filters() -> FilteringLogger {
         filters: filter_map,
         default_filters: vec![SyscallFilter {
             syscall: HashSet::new(),
-            match_path_created_by_process: true,
             args: Default::default(),
             path_matcher: None,
             flag_matcher: None,

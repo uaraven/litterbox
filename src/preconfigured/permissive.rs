@@ -14,7 +14,6 @@ pub(crate) fn permissive_filters() -> FilteringLogger {
         filters: Default::default(),
         default_filters: vec![SyscallFilter {
             syscall: HashSet::new(),
-            match_path_created_by_process: false,
             args: Default::default(),
             path_matcher: None,
             flag_matcher: None,
