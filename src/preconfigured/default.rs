@@ -3,7 +3,11 @@ use syscall_numbers::native;
 use crate::{
     FilteringLogger,
     filters::syscall_filter::{FilterOutcome, SyscallFilter},
+    loggers::syscall_logger::SyscallLogger,
 };
+use std::collections::HashSet;
+
+use crate::filters::{syscall_filter::FilterAction, utils::group_filters_by_syscall};
 
 fn get_allowed_paths() -> Vec<String> {
     let home = std::env::var("HOME")
@@ -24,14 +28,7 @@ fn get_allowed_paths() -> Vec<String> {
 }
 
 #[cfg(target_arch = "aarch64")]
-pub(crate) fn default_filters() -> FilteringLogger {
-    use std::collections::HashSet;
-
-    use crate::{
-        filters::{syscall_filter::FilterAction, utils::group_filters_by_syscall},
-        simple_logger::simple_logger,
-    };
-
+pub(crate) fn default_filters<T: SyscallLogger>(logger: T) -> FilteringLogger<T> {
     let allowed_path_list = get_allowed_paths();
 
     let filtered_syscalls = vec![
@@ -97,7 +94,7 @@ pub(crate) fn default_filters() -> FilteringLogger {
                 tag: None,
             },
         }],
-        logger: Some(simple_logger),
+        logger: Some(logger),
     }
 }
 

@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
 use crate::{
-    filters::syscall_filter::{FilterAction, SyscallFilter},
-    filters::utils::group_filters_by_syscall,
+    TextLogger,
+    filters::{
+        syscall_filter::{FilterAction, SyscallFilter},
+        utils::group_filters_by_syscall,
+    },
+    loggers::syscall_logger::SyscallLogger,
     preconfigured::default::default_filters,
     syscall_common::EXTRA_PATHNAME,
     syscall_event::{SyscallEvent, SyscallEventListener},
-    syscall_logger::SyscallLogger,
     trace_process::TraceProcess,
 };
 
@@ -30,24 +33,26 @@ impl SyscallFilterTrigger {
     }
 }
 
-pub(crate) struct FilteringLogger {
+pub(crate) struct FilteringLogger<T: SyscallLogger> {
     pub primed: bool,
     pub trigger_event: Option<SyscallFilterTrigger>,
     pub filters: HashMap<u64, Vec<SyscallFilter>>,
     pub default_filters: Vec<SyscallFilter>,
-    pub logger: Option<SyscallLogger>,
+    pub logger: Option<T>,
 }
 
-impl FilteringLogger {
+impl FilteringLogger<TextLogger> {
     pub fn default() -> Self {
-        default_filters()
+        default_filters(TextLogger {})
     }
+}
 
+impl<T: SyscallLogger> FilteringLogger<T> {
     #[cfg(test)]
     pub fn new(
         filters: Vec<SyscallFilter>,
         trigger_event: Option<SyscallFilterTrigger>,
-        logger: Option<SyscallLogger>,
+        logger: Option<T>,
     ) -> Self {
         let mut filter_map: HashMap<u64, Vec<SyscallFilter>> = HashMap::new();
         let mut defaults: Vec<SyscallFilter> = Vec::new();
@@ -70,7 +75,7 @@ impl FilteringLogger {
 
     pub fn log_event(&self, event: &SyscallEvent) {
         if let Some(ref logger) = self.logger {
-            logger(event);
+            logger.log_event(event);
         }
     }
 
@@ -101,7 +106,7 @@ impl FilteringLogger {
     }
 }
 
-impl SyscallEventListener for FilteringLogger {
+impl<T: SyscallLogger> SyscallEventListener for FilteringLogger<T> {
     fn process_event(&mut self, proc: &TraceProcess, event: &SyscallEvent) -> Option<SyscallEvent> {
         if !self.primed {
             if let Some(ref trigger) = self.trigger_event {

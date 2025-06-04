@@ -1,12 +1,14 @@
 #[cfg(test)]
 use crate::{
+    loggers::text_logger::TextLogger,
     syscall_event::{SyscallEvent, SyscallEventListener},
     trace_process::TraceProcess,
 };
 
 #[test]
 fn test_permissive_filter() {
-    let mut filter = crate::preconfigured::permissive::permissive_filters();
+    let logger = TextLogger {};
+    let mut filter = crate::preconfigured::permissive::permissive_filters(logger);
     let proc = TraceProcess::new(nix::unistd::Pid::from_raw(1000));
 
     let event = SyscallEvent {

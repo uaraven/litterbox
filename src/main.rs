@@ -2,6 +2,7 @@ mod fd_utils;
 mod filter_listener;
 mod filters;
 mod flags;
+mod loggers;
 mod preconfigured;
 mod regs;
 mod simple_logger;
@@ -9,7 +10,6 @@ mod strace;
 mod syscall_args;
 mod syscall_common;
 mod syscall_event;
-mod syscall_logger;
 mod syscall_parser;
 mod syscall_parsers_file;
 mod syscall_parsers_process;
@@ -19,8 +19,10 @@ mod trace_process;
 mod tests;
 
 use filter_listener::FilteringLogger;
+use loggers::text_logger::TextLogger;
 use nix::sys::ptrace;
 use nix::unistd::{ForkResult, fork};
+use preconfigured::permissive::permissive_filters;
 
 use std::env;
 
@@ -80,9 +82,10 @@ fn main() {
             let pid = std::process::id();
             println!("Parent process PID: {}", pid);
 
-            let logger = FilteringLogger::default();
+            let logger = TextLogger {};
+            let mut filter_logger = permissive_filters(logger);
 
-            let mut tracer = strace::TraceContext::new(child, Some(logger));
+            let mut tracer = strace::TraceContext::new(child, Some(filter_logger));
 
             tracer.trace_process();
         }

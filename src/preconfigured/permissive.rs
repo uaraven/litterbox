@@ -3,12 +3,14 @@ use std::{collections::HashSet, vec};
 use crate::{
     FilteringLogger,
     filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter},
-    simple_logger::simple_logger,
+    loggers,
 };
 
 // This function returns a permissive filtering logger.
 // It allows all syscalls and logs them.
-pub(crate) fn permissive_filters() -> FilteringLogger {
+pub(crate) fn permissive_filters<T: loggers::syscall_logger::SyscallLogger>(
+    logger: T,
+) -> FilteringLogger<T> {
     FilteringLogger {
         primed: true,
         trigger_event: None,
@@ -24,6 +26,6 @@ pub(crate) fn permissive_filters() -> FilteringLogger {
                 tag: None,
             },
         }],
-        logger: Some(simple_logger),
+        logger: Some(logger),
     }
 }
