@@ -26,9 +26,14 @@ fn get_allowed_paths() -> Vec<String> {
     ];
     allowed_paths
 }
-
+/// default_filters returns a default filtering logger.
+/// It allows syscalls that are necessary for basic operations
+/// and blocks potentially harmful syscalls.
+/// Amongst ther
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn default_filters<T: SyscallLogger>(logger: T) -> FilteringLogger<T> {
+    use crate::filters::path_matcher::PathMatchOp;
+
     let allowed_path_list = get_allowed_paths();
 
     let filtered_syscalls = vec![
@@ -41,22 +46,29 @@ pub(crate) fn default_filters<T: SyscallLogger>(logger: T) -> FilteringLogger<T>
             crate::filters::path_matcher::PathMatchOp::Prefix,
             &vec![String::from("O_CREAT")],
         ),
+        SyscallFilter::with_paths(
+            &[
+                native::SYS_write,
+                native::SYS_writev,
+                native::SYS_pwritev,
+                native::SYS_pwritev2,
+                native::SYS_pwrite64,
+                native::SYS_unlinkat,
+                native::SYS_mknodat,
+                native::SYS_mkdirat,
+                native::SYS_chroot,
+                native::SYS_linkat,
+                native::SYS_symlinkat,
+                native::SYS_setxattr,
+                native::SYS_fsetxattr,
+                native::SYS_removexattr,
+                native::SYS_fremovexattr,
+            ],
+            true,
+            &allowed_path_list,
+            PathMatchOp::Prefix,
+        ),
         SyscallFilter::block(&[
-            native::SYS_write,
-            native::SYS_writev,
-            native::SYS_pwritev,
-            native::SYS_pwritev2,
-            native::SYS_pwrite64,
-            native::SYS_unlinkat,
-            native::SYS_mknodat,
-            native::SYS_mkdirat,
-            native::SYS_chroot,
-            native::SYS_linkat,
-            native::SYS_symlinkat,
-            native::SYS_setxattr,
-            native::SYS_fsetxattr,
-            native::SYS_removexattr,
-            native::SYS_fremovexattr,
             native::SYS_sendfile,
             native::SYS_io_setup,
             native::SYS_fchmod,

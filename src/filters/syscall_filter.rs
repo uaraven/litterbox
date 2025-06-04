@@ -98,14 +98,14 @@ impl SyscallFilter {
     }
 
     pub fn with_paths(
-        syscall: i64,
+        syscalls: &[i64],
         allow: bool,
-        paths: &[&str],
+        paths: &Vec<String>,
         path_match_op: PathMatchOp,
     ) -> Self {
-        let path_list = paths.iter().map(|&s| s.to_string()).collect();
+        let path_list = paths.clone();
         Self {
-            syscall: [syscall].into(),
+            syscall: syscalls.iter().cloned().collect(),
             args: HashMap::new(),
             path_matcher: Some(PathMatcher::new(path_list, path_match_op, false)),
             flag_matcher: None,
