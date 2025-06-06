@@ -2,21 +2,18 @@ use syscall_numbers::native;
 
 use crate::filters::syscall_filter::FilterAction;
 use crate::filters::utils::group_filters_by_syscall;
+use crate::loggers::syscall_logger::SyscallLogger;
 use crate::{
     FilteringLogger,
     filters::syscall_filter::{FilterOutcome, SyscallFilter},
 };
 use std::collections::HashSet;
 
-use crate::loggers;
-
 /// This function returns a restrictive filtering logger.
 /// It blocks all syscalls that could modify the filesystem, initiate network connection or execute new processes.
 /// It also logs all syscalls.
 #[cfg(target_arch = "aarch64")]
-pub(crate) fn restrictive_filters<T: loggers::syscall_logger::SyscallLogger>(
-    logger: T,
-) -> FilteringLogger<T> {
+pub(crate) fn restrictive_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger {
     let filtered_syscalls = vec![
         SyscallFilter::stdio_allow(native::SYS_write),
         SyscallFilter::with_flags(native::SYS_openat, false, &["O_CREAT"]),

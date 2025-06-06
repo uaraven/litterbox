@@ -8,7 +8,7 @@ use crate::{
 #[test]
 fn test_permissive_filter() {
     let logger = TextLogger {};
-    let mut filter = crate::preconfigured::permissive::permissive_filters(logger);
+    let mut filter = crate::preconfigured::permissive::permissive_filters(Box::new(logger));
     let proc = TraceProcess::new(nix::unistd::Pid::from_raw(1000));
 
     let event = SyscallEvent {

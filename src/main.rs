@@ -1,6 +1,7 @@
 mod cli_args;
 mod fd_utils;
 mod filter_listener;
+mod filter_loader;
 mod filters;
 mod flags;
 mod loggers;
@@ -26,10 +27,7 @@ use nix::sys::ptrace;
 use nix::unistd::{ForkResult, fork};
 use preconfigured::default::default_filters;
 
-use std::env;
-
 fn main() {
-    let mut args = env::args().skip(1);
     let cli = Cli::parse();
 
     let program = match cli.prog.iter().next() {
@@ -72,7 +70,7 @@ fn main() {
             println!("Parent process PID: {}", pid);
 
             let logger = TextLogger {};
-            let filter_logger = default_filters(logger);
+            let filter_logger = default_filters(Box::new(logger));
 
             let mut tracer = strace::TraceContext::new(child, Some(filter_logger));
 

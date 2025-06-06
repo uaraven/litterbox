@@ -33,26 +33,25 @@ impl SyscallFilterTrigger {
     }
 }
 
-pub(crate) struct FilteringLogger<T: SyscallLogger> {
+pub(crate) struct FilteringLogger {
     pub primed: bool,
     pub trigger_event: Option<SyscallFilterTrigger>,
     pub filters: HashMap<u64, Vec<SyscallFilter>>,
     pub default_filters: Vec<SyscallFilter>,
-    pub logger: Option<T>,
+    pub logger: Option<Box<dyn SyscallLogger>>,
 }
 
-impl FilteringLogger<TextLogger> {
+impl FilteringLogger {
     pub fn default() -> Self {
-        default_filters(TextLogger {})
+        default_filters(Box::new(TextLogger {}))
     }
 }
 
-impl<T: SyscallLogger> FilteringLogger<T> {
-    #[cfg(test)]
+impl FilteringLogger {
     pub fn new(
         filters: Vec<SyscallFilter>,
         trigger_event: Option<SyscallFilterTrigger>,
-        logger: Option<T>,
+        logger: Option<Box<dyn SyscallLogger>>,
     ) -> Self {
         let mut filter_map: HashMap<u64, Vec<SyscallFilter>> = HashMap::new();
         let mut defaults: Vec<SyscallFilter> = Vec::new();
@@ -106,7 +105,7 @@ impl<T: SyscallLogger> FilteringLogger<T> {
     }
 }
 
-impl<T: SyscallLogger> SyscallEventListener for FilteringLogger<T> {
+impl SyscallEventListener for FilteringLogger {
     fn process_event(&mut self, proc: &TraceProcess, event: &SyscallEvent) -> Option<SyscallEvent> {
         if !self.primed {
             if let Some(ref trigger) = self.trigger_event {

@@ -33,7 +33,7 @@ fn test_block_open_in_forbidden_folder() {
         },
     };
 
-    let mut filter = FilteringLogger::<TextLogger>::new(vec![block_open], None, None);
+    let mut filter = FilteringLogger::new(vec![block_open], None, None);
     let mut proc = TraceProcess::new(nix::unistd::Pid::from_raw(1000));
     proc.add_created_path("/forbidden_folder/file.txt".to_string());
     proc.add_fd(
@@ -87,7 +87,7 @@ fn test_dont_block_open_in_non_forbidden_folder() {
         },
     };
 
-    let mut filter = FilteringLogger::<TextLogger>::new(vec![block_open], None, None);
+    let mut filter = FilteringLogger::new(vec![block_open], None, None);
     let mut proc = TraceProcess::new(nix::unistd::Pid::from_raw(1000));
     proc.add_created_path("/non_forbidden_folder/file.txt".to_string());
     proc.add_fd(
@@ -140,7 +140,7 @@ fn test_dont_block_open_in_forbidden_folder_when_created_by_this_process() {
         },
     };
 
-    let mut filter = FilteringLogger::<TextLogger>::new(vec![block_open], None, None);
+    let mut filter = FilteringLogger::new(vec![block_open], None, None);
     let mut proc = TraceProcess::new(nix::unistd::Pid::from_raw(1000));
     proc.add_created_path("/forbidden_folder/file.txt".to_string());
     proc.add_fd(

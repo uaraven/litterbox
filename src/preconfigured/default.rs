@@ -31,7 +31,7 @@ fn get_allowed_paths() -> Vec<String> {
 /// and blocks potentially harmful syscalls.
 /// Amongst ther
 #[cfg(target_arch = "aarch64")]
-pub(crate) fn default_filters<T: SyscallLogger>(logger: T) -> FilteringLogger<T> {
+pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger {
     use crate::filters::path_matcher::PathMatchOp;
 
     let allowed_path_list = get_allowed_paths();

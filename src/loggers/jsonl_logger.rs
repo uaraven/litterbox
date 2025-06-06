@@ -3,9 +3,9 @@ use crate::syscall_event::{SyscallEvent, SyscallStopType};
 use super::syscall_logger::SyscallLogger;
 
 #[derive(Default)]
-pub(crate) struct TextLogger {}
+pub(crate) struct JsonlLogger {}
 
-impl SyscallLogger for TextLogger {
+impl SyscallLogger for JsonlLogger {
     fn log_event(&self, event: &SyscallEvent) {
         let mut content = String::new();
         content.push_str(&format!("[{}] {} ({})", event.pid, event.name, event.id));

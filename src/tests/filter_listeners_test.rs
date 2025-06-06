@@ -57,7 +57,7 @@ fn test_trigger_event_blocks_until_primed() {
         syscall_id: 42,
         file_path: Some("/tmp/trigger".to_string()),
     };
-    let mut logger = FilteringLogger::<TextLogger>::new(vec![], Some(trigger), None);
+    let mut logger = FilteringLogger::new(vec![], Some(trigger), None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
 
     // Not primed, wrong syscall
@@ -97,7 +97,7 @@ fn test_filtering_logger_with_custom_filter() {
             tag: Some("blocked".to_string()),
         },
     };
-    let mut logger = FilteringLogger::<TextLogger>::new(vec![filter], None, None);
+    let mut logger = FilteringLogger::new(vec![filter], None, None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
     let event = make_test_event(123, None);
     let result = logger.process_event(&proc, &event).unwrap();
@@ -118,7 +118,7 @@ fn test_filtering_logger_default_syscall_id_filters() {
         path_matcher: None,
         flag_matcher: None,
     };
-    let mut logger = FilteringLogger::<TextLogger>::new(vec![filter], None, None);
+    let mut logger = FilteringLogger::new(vec![filter], None, None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
     let event = make_test_event(999, None);
     let result = logger.process_event(&proc, &event).unwrap();
@@ -139,7 +139,7 @@ fn test_handle_filter_non_matching() {
         path_matcher: None,
         flag_matcher: None,
     };
-    let mut logger = FilteringLogger::<TextLogger>::new(vec![filter], None, None);
+    let mut logger = FilteringLogger::new(vec![filter], None, None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
     let event = make_test_event(456, None);
     let result = logger.process_event(&proc, &event).unwrap();
@@ -159,7 +159,7 @@ fn test_handle_filter_matching_by_flag() {
         path_matcher: None,
         flag_matcher: Some(FlagMatcher::new(vec!["O_CREAT".to_string()])),
     };
-    let mut logger = FilteringLogger::<TextLogger>::new(vec![filter], None, None);
+    let mut logger = FilteringLogger::new(vec![filter], None, None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
     let mut extra_context: HashMap<&'static str, String> = HashMap::new();
     extra_context.insert(EXTRA_FLAGS, "O_CREAT|O_RDONLY".to_string());
@@ -215,7 +215,7 @@ fn test_handle_filter_matching_by_path_prefix() {
         )),
         flag_matcher: None,
     };
-    let mut logger = FilteringLogger::<TextLogger>::new(vec![filter], None, None);
+    let mut logger = FilteringLogger::new(vec![filter], None, None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
     let mut extra_context: HashMap<&'static str, String> = HashMap::new();
     extra_context.insert(EXTRA_PATHNAME, "/tmp/somefile.txt".to_string());
