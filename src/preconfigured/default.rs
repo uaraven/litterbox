@@ -1,5 +1,6 @@
 use syscall_numbers::native;
 
+use crate::filters::path_matcher::PathMatchOp;
 use crate::{
     FilteringLogger,
     filters::syscall_filter::{FilterOutcome, SyscallFilter},
@@ -32,8 +33,6 @@ fn get_allowed_paths() -> Vec<String> {
 /// Amongst ther
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger {
-    use crate::filters::path_matcher::PathMatchOp;
-
     let allowed_path_list = get_allowed_paths();
 
     let filtered_syscalls = vec![
@@ -43,7 +42,7 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
             native::SYS_openat,
             true,
             &allowed_path_list,
-            crate::filters::path_matcher::PathMatchOp::Prefix,
+            PathMatchOp::Prefix,
             &vec![String::from("O_CREAT")],
         ),
         SyscallFilter::with_paths(

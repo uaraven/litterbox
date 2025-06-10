@@ -1,5 +1,5 @@
 
-- [ ] Predefined filters
+- [x] Predefined filters
     - [x] Permissive - allow everything
     - [x] Restrictive - block file writes, changes, sockets and exec
     - [x] Restrictive in a folder - block file writes outside of folder, sockets and exec
@@ -12,4 +12,4 @@
     - [x] Text logging 
         - [ ] color
         - [x] no color
-    - [ ] JSONL logging
+    - [x] JSONL logging

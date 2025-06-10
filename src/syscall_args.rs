@@ -3,7 +3,7 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::flags::{clone_flags_to_str, dir_fd_to_str, open_flags_to_str};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub enum SyscallArgument {
     Int(u64),
     Fd(u64),
@@ -37,8 +37,8 @@ impl fmt::Display for SyscallArgument {
                 write!(f, "'{}...'", hex_str)
             }
             SyscallArgument::UnixAddress { addr } => write!(f, "{}", addr),
-            SyscallArgument::IpV4Address { addr, port } => write!(f, "{}:{}", addr, port),
-            SyscallArgument::IpV6Address { addr, port } => write!(f, "[{}]:{}", addr, port),
+            SyscallArgument::IpV4Address { addr, port } => write!(f, "\"{}:{}\"", addr, port),
+            SyscallArgument::IpV6Address { addr, port } => write!(f, "\"[{}]:{}\"", addr, port),
             SyscallArgument::OpenFlags(flags) => write!(f, "{}", open_flags_to_str(*flags)),
             SyscallArgument::DirFd(fd) => write!(f, "{}", dir_fd_to_str(*fd)),
             SyscallArgument::Raw(raw) => write!(f, "0x{:x}", raw),
