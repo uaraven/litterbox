@@ -147,7 +147,7 @@ impl SyscallEvent {
                 }
             }
             SyscallStopType::Exit => {
-                let err = error_code.unwrap_or(-libc::ENOSYS as i32) as u64;
+                let err = (-error_code.unwrap_or(libc::ENOSYS as i32)) as u64;
                 let mut regs = self.regs.clone();
                 regs.return_value = err;
                 let arch_regs = regs.to_regs();
@@ -157,6 +157,8 @@ impl SyscallEvent {
                 } else {
                     return SyscallEvent {
                         blocked: true,
+                        regs: regs,
+                        return_value: err,
                         ..self.clone()
                     };
                 }

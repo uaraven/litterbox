@@ -27,6 +27,8 @@ use nix::sys::ptrace;
 use nix::unistd::{ForkResult, fork};
 use preconfigured::default::default_filters;
 
+use crate::filter_loader::{Error, filters_from_args};
+
 fn main() {
     let cli = Cli::parse();
 
@@ -37,15 +39,6 @@ fn main() {
             std::process::exit(1);
         }
     };
-
-    // // First argument is the program name to run
-    // let program = match args.next() {
-    //     Some(p) => p,
-    //     None => {
-    //         eprintln!("Usage: runner <program> [args...]");
-    //         std::process::exit(1);
-    //     }
-    // };
 
     // The rest are arguments to pass to that program
     // let program_args: Vec<String> = args.collect();
@@ -69,8 +62,13 @@ fn main() {
             let pid = std::process::id();
             println!("Parent process PID: {}", pid);
 
-            let logger = TextLogger {};
-            let filter_logger = default_filters(Box::new(logger));
+            let filter_logger = match filters_from_args(cli) {
+                Ok(logger) => logger,
+                Err(e) => {
+                    eprintln!("Error initializing filters: {}", e.msg);
+                    std::process::exit(1);
+                }
+            };
 
             let mut tracer = strace::TraceContext::new(child, Some(filter_logger));
 

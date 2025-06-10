@@ -87,19 +87,18 @@ impl FilteringLogger {
         if filter.matches(proc, &event) {
             // if the filter matches, we review the outcome to figure out what to do
             let mut event = event.clone();
-            if filter.outcome.log {
-                self.log_event(&event);
-            }
             if filter.outcome.tag.is_some() {
                 event.label = filter.outcome.tag.clone();
             }
-            match filter.outcome.action {
-                FilterAction::Block(error) => {
-                    return Some(event.block_syscall(Some(error)));
-                }
-                FilterAction::Allow => {}
+            let new_event = match filter.outcome.action {
+                FilterAction::Block(error) => event.block_syscall(Some(error)),
+                FilterAction::Allow => event.clone(),
+            };
+            if filter.outcome.log {
+                self.log_event(&new_event);
             }
-            return Some(event);
+
+            return Some(new_event);
         }
         None
     }

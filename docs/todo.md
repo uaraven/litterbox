@@ -1,13 +1,15 @@
 
 - [ ] Predefined filters
-    - [ ] Permissive - allow everything
-    - [ ] Restrictive - block file writes, changes, sockets and exec
-    - [ ] Restrictive in a folder - block file writes outside of folder, sockets and exec
-- [ ] Load filters from file
-- [ ] Command line parameters
-    - [ ] Select predefined filters
-    - [ ] Choose filter file
-    - [ ] logging
+    - [x] Permissive - allow everything
+    - [x] Restrictive - block file writes, changes, sockets and exec
+    - [x] Restrictive in a folder - block file writes outside of folder, sockets and exec
+- [x] Load filters from file
+- [x] Command line parameters
+    - [x] Select predefined filters
+    - [x] Choose filter file
+    - [x] logging
 - [ ] Logging
-    - [ ] Text logging (color and B&W)
+    - [x] Text logging 
+        - [ ] color
+        - [x] no color
     - [ ] JSONL logging
