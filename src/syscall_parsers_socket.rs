@@ -11,10 +11,10 @@ use nix::{
 
 use crate::{
     regs::Regs,
-    strace::TraceProcess,
     syscall_args::SyscallArgument,
-    syscall_common::{read_buffer, read_cstring, EXTRA_ADDR, MAX_BUFFER_SIZE},
+    syscall_common::{EXTRA_ADDR, MAX_BUFFER_SIZE, read_buffer, read_cstring},
     syscall_event::{ExtraData, SyscallEvent},
+    trace_process::TraceProcess,
 };
 
 fn get_sockaddr_as_arg(pid: Pid, regs: &Regs, reg_ptr: usize, reg_size: usize) -> SyscallArgument {
@@ -54,7 +54,7 @@ fn get_sockaddr_as_arg(pid: Pid, regs: &Regs, reg_ptr: usize, reg_size: usize) -
     }
 }
 
-pub fn parse_connect(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_connect(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let arguments = Vec::from([
         SyscallArgument::Int(regs.regs[0]),
@@ -64,12 +64,12 @@ pub fn parse_connect(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
 
     let address = arguments.get(1).unwrap().to_string();
     if is_entry {
-        proc.add_fd(regs.regs[0] as i64, EXTRA_ADDR, address);
+        proc.add_fd(regs.regs[0] as i64, EXTRA_ADDR, address, 0);
     }
     SyscallEvent::new(proc, arguments, &regs)
 }
 
-pub fn parse_bind(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_bind(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
     let arguments = Vec::from([
         SyscallArgument::Fd(regs.regs[0]),
@@ -79,12 +79,12 @@ pub fn parse_bind(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
 
     let address = arguments.get(1).unwrap().to_string();
     if is_entry {
-        proc.add_fd(regs.regs[0] as i64, EXTRA_ADDR, address);
+        proc.add_fd(regs.regs[0] as i64, EXTRA_ADDR, address, 0);
     }
     SyscallEvent::new(&proc, arguments, &regs)
 }
 
-pub fn parse_listen(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_listen(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
     let fd = regs.regs[0] as i64;
 
@@ -100,31 +100,7 @@ pub fn parse_listen(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     SyscallEvent::new_with_extras(proc, arguments, &regs, extras)
 }
 
-pub fn parse_recv(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let mut extras: ExtraData = HashMap::new();
-    let fd = regs.regs[0] as i64;
-    if let Some(fd_addr) = proc.get_fd(fd) {
-        extras.insert(fd_addr.name, fd_addr.value.clone());
-    }
-
-    let size = min(regs.regs[2] as usize, MAX_BUFFER_SIZE);
-    let buffer_arg = match read_buffer(proc.get_pid(), regs.regs[1] as usize, size) {
-        Ok(buffer) => SyscallArgument::Bytes(buffer),
-        Err(_) => SyscallArgument::Ptr(regs.regs[1]),
-    };
-    SyscallEvent::new_with_extras(
-        proc,
-        Vec::from([
-            SyscallArgument::Fd(regs.regs[0]),
-            buffer_arg,
-            SyscallArgument::Int(regs.regs[2]),
-        ]),
-        &regs,
-        extras,
-    )
-}
-
-pub fn parse_recvfrom(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_recvfrom(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
     let fd = regs.regs[0] as i64;
     let flags = regs.regs[3];
@@ -151,7 +127,7 @@ pub fn parse_recvfrom(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     )
 }
 
-pub fn parse_recvmsg(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_recvmsg(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
     let fd = regs.regs[0] as i64;
     if let Some(fd_data) = proc.get_fd(fd) {

@@ -3,101 +3,12 @@ use std::collections::HashMap;
 use nix::errno::Errno;
 use nix::libc::{PTRACE_EVENT_CLONE, PTRACE_EVENT_EXEC, PTRACE_EVENT_FORK, PTRACE_EVENT_VFORK};
 use nix::sys::signal::Signal;
-use nix::sys::wait::{waitpid, WaitStatus};
+use nix::sys::wait::{WaitStatus, waitpid};
 use nix::sys::{ptrace, signal};
 use nix::unistd::Pid;
 
-use crate::syscall_event::{SyscallEvent, SyscallEventListener, SyscallStopType};
-
-/// A struct to hold the additional data for a file descriptor
-/// This structure is populated by the syscall that creates the file descriptor
-/// and is used to provide additional information about the file descriptor
-/// at the point of use. For example, the filepath associated with the file descriptor
-/// during `sys_open` call can be retrieved from this structure during the `sys_read` call.
-#[derive(Debug, Clone)]
-pub struct FdData {
-    pub name: &'static str,
-    pub value: String,
-}
-
-pub struct TraceProcess {
-    pid: Pid,
-    last_syscall: SyscallEvent,
-    expected_stop_type: SyscallStopType,
-    fd_map: HashMap<i64, FdData>,
-}
-
-impl TraceProcess {
-    pub fn new(pid: Pid) -> Self {
-        Self {
-            pid,
-            last_syscall: SyscallEvent::fake_event(),
-            expected_stop_type: SyscallStopType::Enter,
-            fd_map: HashMap::new(),
-        }
-    }
-
-    pub fn copy_from(other: &TraceProcess, new_pid: Pid) -> Self {
-        Self {
-            pid: new_pid,
-            last_syscall: SyscallEvent::fake_event(),
-            expected_stop_type: SyscallStopType::Enter,
-            fd_map: other.fd_map.clone(),
-        }
-    }
-
-    pub fn get_pid(&self) -> Pid {
-        self.pid
-    }
-
-    // Get the last syscall event
-    // If the current syscall ID is not the same as the last syscall ID, return None
-    pub fn get_last_syscall(&self, current_syscall_id: u64) -> Option<&SyscallEvent> {
-        if self.last_syscall.id != current_syscall_id {
-            return None;
-        } else {
-            Some(&self.last_syscall)
-        }
-    }
-
-    pub fn set_last_syscall(&mut self, syscall: &SyscallEvent) {
-        self.last_syscall = syscall.clone();
-    }
-
-    pub fn add_fd(&mut self, fd: i64, name: &'static str, value: String) {
-        self.fd_map.insert(fd, FdData { name, value });
-    }
-
-    pub fn get_fd(&self, fd: i64) -> Option<&FdData> {
-        self.fd_map.get(&fd)
-    }
-
-    pub fn remove_fd(&mut self, fd: i64) {
-        self.fd_map.remove(&fd);
-    }
-
-    pub fn set_current_stop_type(&mut self, stop_type: SyscallStopType) {
-        self.expected_stop_type = match stop_type {
-            SyscallStopType::Enter => SyscallStopType::Exit,
-            SyscallStopType::Exit => SyscallStopType::Enter,
-        };
-    }
-
-    pub fn is_entry(&self, syscall_id: u64) -> bool {
-        match self.expected_stop_type {
-            SyscallStopType::Enter => true,
-            SyscallStopType::Exit => {
-                if self.last_syscall.id == syscall_id {
-                    false
-                } else {
-                    // if we thought that previous syscall-stop was on entry and now we see different syscall id
-                    // that means that the previous stop was actually on exit and now is on entry
-                    true
-                }
-            }
-        }
-    }
-}
+use crate::syscall_event::{SyscallEvent, SyscallEventListener};
+use crate::trace_process::TraceProcess;
 
 pub struct TraceContext<F: SyscallEventListener> {
     pid: Pid,
@@ -159,9 +70,19 @@ impl<F: SyscallEventListener> TraceContext<F> {
                                 .expect("Failed to convert event to i32");
                             let new_pid = Pid::from_raw(event_data);
                             println!("Exec'ing new  process with pid={} exec", new_pid);
-                            let new_process = TraceProcess::new(new_pid);
-                            self.processes.clear();
-                            self.processes.insert(new_pid, new_process);
+                            // remove all other processes from the list
+                            let mut pids_to_remove = Vec::new();
+                            for pid in self.processes.keys() {
+                                if *pid != new_pid {
+                                    pids_to_remove.push(*pid);
+                                }
+                            }
+                            for pid in pids_to_remove {
+                                self.processes.remove(&pid);
+                            }
+                            if let Some(process) = self.processes.get_mut(&pid) {
+                                process.clear_closed_fds();
+                            }
                         } else if event == PTRACE_EVENT_CLONE
                             || event == PTRACE_EVENT_FORK
                             || event == PTRACE_EVENT_VFORK
@@ -176,7 +97,7 @@ impl<F: SyscallEventListener> TraceContext<F> {
                                 let parent = self.processes.get_mut(&pid).expect(
                                     format!("No process with pid {} is being traced", pid).as_str(),
                                 );
-                                let child_process = TraceProcess::copy_from(&parent, child_pid);
+                                let child_process = TraceProcess::clone_process(&parent, child_pid);
                                 self.processes.insert(child_pid, child_process);
                             } else {
                                 println!("Process {} started child process {}", pid, child_pid);
@@ -193,7 +114,7 @@ impl<F: SyscallEventListener> TraceContext<F> {
                         process.set_current_stop_type(syscall_event.stop_type);
 
                         if let Some(event_listener) = &mut self.listener {
-                            match event_listener.process_event(&syscall_event) {
+                            match event_listener.process_event(process, &syscall_event) {
                                 Some(new_event) => {
                                     process.set_last_syscall(&new_event);
                                 }

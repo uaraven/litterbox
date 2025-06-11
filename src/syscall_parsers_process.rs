@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use crate::{
     regs::Regs,
-    strace::TraceProcess,
     syscall_args::SyscallArgument,
     syscall_common::{EXTRA_FLAGS, read_buffer, read_cstring},
     syscall_event::{ExtraData, SyscallEvent},
+    trace_process::TraceProcess,
 };
 use nix::libc::clone_args;
 
-pub fn parse_clone(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_clone(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     SyscallEvent::new(
         proc,
         Vec::from([
@@ -22,7 +22,7 @@ pub fn parse_clone(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     )
 }
 
-pub fn parse_clone3(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_clone3(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let extras = match read_buffer(
         proc.get_pid(),
         regs.regs[0] as usize,
@@ -46,7 +46,7 @@ pub fn parse_clone3(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     )
 }
 
-pub fn parse_execve(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_execve(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let pathname_arg = match read_cstring(proc.get_pid(), regs.regs[0] as usize) {
         Ok(pathname) => SyscallArgument::String(pathname),
         Err(_) => SyscallArgument::Ptr(regs.regs[0]),
@@ -63,7 +63,7 @@ pub fn parse_execve(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     )
 }
 
-pub fn parse_execveat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_execveat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let pathname_arg = match read_cstring(proc.get_pid(), regs.regs[0] as usize) {
         Ok(pathname) => SyscallArgument::String(pathname),
         Err(_) => SyscallArgument::Ptr(regs.regs[1]),
