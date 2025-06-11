@@ -9,8 +9,8 @@ impl SyscallLogger for TextLogger {
     fn log_event(&self, event: &SyscallEvent) {
         let mut content = String::new();
         content.push_str(&format!("[{}] {} ({})", event.pid, event.name, event.id));
-        if event.label.is_some() {
-            content.push_str(&format!(" |{}|", event.label.as_ref().unwrap()));
+        if let Some(label) = &event.label {
+            content.push_str(&format!(" |{}|", label));
         }
         content.push_str(" (");
         for arg in &event.arguments {
