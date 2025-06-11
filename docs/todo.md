@@ -13,3 +13,13 @@
         - [ ] color
         - [x] no color
     - [x] JSONL logging
+- [ ] DNS sniffing
+- [ ] Simple filtering
+  - [ ] Simple file filtering
+    - [ ] Block reads in directories
+    - [ ] Block writes in directories
+  - [ ] Simple network filtering
+    - [ ] Block connections to IP addresses/Hosts
+    - [ ] Block server sockets
+  - [ ] Simple subprocess filtering
+    - [ ] Block spawning processes by name

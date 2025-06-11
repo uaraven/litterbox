@@ -32,14 +32,8 @@ _Litterbox_ produces a log (txt or json) with the results of program execution. 
 
 ### Configuration
 
-_Litterbox_ is configured with a toml configuration file and it  supports following configuration options:
- - List of folders where reads are enabled
- - List of folders where writes are enabled (this automatically implies read permissions)
- - List of folders where deletes and renamings are enabled
- - Allow application to delete files and folders created by the application
- - Allow application to change working directory
- - List of applications that can be started
- - List of syscalls that are allowed
- - List of syscalls that are traced
+_Litterbox_ supports two modes of configuration:
+ - syscall filters allow to specify syscall names, file paths, IP addresses, etc. to filter on and the actions on what to do with the filtered syscalls. Configuration can be defined in a JSON file and reused. See [filters doc](docs/filters.md) for more details.
+ - Simplified filtering for file, network and process operations. Rest of the syscalls is ignored (but can be logged)
 
 Details TDB
