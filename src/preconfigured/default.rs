@@ -115,8 +115,42 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
 #[cfg(target_arch = "x86_64")]
 pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger {
     use syscall_numbers::x86_64;
+
+    let allowed_path_list = get_allowed_paths();
+
+
     let filtered_syscalls = vec![
         SyscallFilter::stdio_allow(x86_64::SYS_write),
+        SyscallFilter::allow(&[x86_64::SYS_write], &allowed_path_list),
+        SyscallFilter::with_paths_and_flags(
+            native::SYS_openat,
+            true,
+            &allowed_path_list,
+            PathMatchOp::Prefix,
+            &vec![String::from("O_CREAT")],
+        ),
+        SyscallFilter::with_paths(
+            &[
+                x86_64::SYS_write,
+                x86_64::SYS_writev,
+                x86_64::SYS_pwritev,
+                x86_64::SYS_pwritev2,
+                x86_64::SYS_pwrite64,
+                x86_64::SYS_unlinkat,
+                x86_64::SYS_mknodat,
+                x86_64::SYS_mkdirat,
+                x86_64::SYS_chroot,
+                x86_64::SYS_linkat,
+                x86_64::SYS_symlinkat,
+                x86_64::SYS_setxattr,
+                x86_64::SYS_fsetxattr,
+                x86_64::SYS_removexattr,
+                x86_64::SYS_fremovexattr,
+            ],
+            true,
+            &allowed_path_list,
+            PathMatchOp::Prefix,
+        ),
         SyscallFilter::block(&[
             x86_64::SYS_write,
             x86_64::SYS_writev,
