@@ -6,5 +6,5 @@ pub mod syscall_filter;
 #[cfg(target_arch = "aarch64")]
 pub mod syscall_names_aarch64;
 #[cfg(target_arch = "x86_64")]
-pub mod syscall_names_x64_86;
+pub mod syscall_names_x86_64;
 pub mod utils;
