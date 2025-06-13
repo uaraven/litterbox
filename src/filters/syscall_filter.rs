@@ -87,7 +87,7 @@ impl SyscallFilter {
         Self {
             syscall: syscall.iter().cloned().collect(),
             args: HashMap::new(),
-            path_matcher: Some(PathMatcher::new(path.clone(), Prefix, false)),
+            path_matcher: if path.is_empty() {None} else {  Some(PathMatcher::new(path.clone(), Prefix, false))},
             flag_matcher: None,
             outcome: FilterOutcome {
                 action: FilterAction::Allow,

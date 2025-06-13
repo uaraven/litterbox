@@ -151,6 +151,15 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
             &allowed_path_list,
             PathMatchOp::Prefix,
         ),
+        SyscallFilter::allow(&[
+            x86_64::SYS_open,
+            x86_64::SYS_openat,
+            x86_64::SYS_openat2,
+            x86_64::SYS_close,
+            x86_64::SYS_read,
+            x86_64::SYS_readv,
+            x86_64::SYS_recvmmsg,
+        ], &vec![]),
         SyscallFilter::block(&[
             x86_64::SYS_write,
             x86_64::SYS_writev,
@@ -207,7 +216,7 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
             flag_matcher: None,
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
-                log: true,
+                log: false,
                 tag: None,
             },
         }],
