@@ -1,14 +1,22 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Add,
+};
 
-use serde::{Deserialize, de::Error};
+use serde::Deserialize;
 
 use crate::{
-    FilteringLogger, filter_listener::SyscallFilterTrigger, loggers::syscall_logger::SyscallLogger,
+    FilteringLogger,
+    filter_listener::SyscallFilterTrigger,
+    filters::{
+        address_matcher::AddressMatcher, event_matcher::ContextMatcher, matcher::StrMatchOp,
+    },
+    loggers::syscall_logger::SyscallLogger,
 };
 
 use super::{
     flag_matcher::FlagMatcher,
-    path_matcher::{PathMatchOp, PathMatcher},
+    path_matcher::PathMatcher,
     syscall_filter::{FilterAction, FilterOutcome, SyscallFilter},
     utils::syscall_id_by_name,
 };
@@ -27,13 +35,22 @@ pub(crate) struct FilterOutcomeDto {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct SyscallFilterDto {
+pub(crate) struct SyscallMatcher {
     pub syscall_names: Vec<String>,
     pub args: HashMap<u8, Vec<u64>>,
+    #[serde(default)]
     pub paths: Vec<String>,
-    pub path_op: String,
+    #[serde(default)]
+    pub addresses: Vec<String>,
+    pub port: Option<u16>,
+    pub compare_op: String,
     pub flags: Vec<String>,
     pub match_path_created_by_process: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SyscallFilterDto {
+    pub matcher: SyscallMatcher,
     pub outcome: FilterOutcomeDto,
 }
 
@@ -104,14 +121,14 @@ impl SyscallFilterDto {
         serde_json::from_str(json.as_str())
     }
 
-    pub fn parse_path_op(&self) -> Result<PathMatchOp, ParsingError> {
-        match self.path_op.as_str() {
-            "exact" => Ok(PathMatchOp::Exact),
-            "prefix" => Ok(PathMatchOp::Prefix),
-            "suffix" => Ok(PathMatchOp::Suffix),
-            "contains" => Ok(PathMatchOp::Contains),
+    pub fn parse_path_op(&self) -> Result<StrMatchOp, ParsingError> {
+        match self.matcher.compare_op.as_str() {
+            "exact" => Ok(StrMatchOp::Exact),
+            "prefix" => Ok(StrMatchOp::Prefix),
+            "suffix" => Ok(StrMatchOp::Suffix),
+            "contains" => Ok(StrMatchOp::Contains),
             _ => Err(ParsingError {
-                message: format!("Invalid path match operation: {}", self.path_op),
+                message: format!("Invalid path match operation: {}", self.matcher.compare_op),
             }),
         }
     }
@@ -136,6 +153,7 @@ impl SyscallFilterDto {
 
     pub fn to_syscall_filter(&self) -> Result<SyscallFilter, ParsingError> {
         let syscall_ids = self
+            .matcher
             .syscall_names
             .iter()
             .map(|f| syscall_id_by_name(f.as_str()))
@@ -144,6 +162,7 @@ impl SyscallFilterDto {
             .collect::<HashSet<_>>();
 
         let arg_map = self
+            .matcher
             .args
             .iter()
             .map(|(k, v)| (*k, v.iter().cloned().collect()))
@@ -155,17 +174,23 @@ impl SyscallFilterDto {
         Ok(SyscallFilter {
             syscall: syscall_ids,
             args: arg_map,
-            path_matcher: if !self.paths.is_empty() {
-                Some(PathMatcher::new(
-                    self.paths.clone(),
+            context_matcher: if !self.matcher.paths.is_empty() {
+                Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                    self.matcher.paths.clone(),
                     path_match_op,
-                    self.match_path_created_by_process,
-                ))
+                    self.matcher.match_path_created_by_process,
+                )))
+            } else if !self.matcher.addresses.is_empty() {
+                Some(ContextMatcher::AddressMatcher(AddressMatcher::new(
+                    self.matcher.addresses.iter().map(|s| s.as_str()).collect(),
+                    path_match_op,
+                    self.matcher.port,
+                )))
             } else {
                 None
             },
-            flag_matcher: if !self.flags.is_empty() {
-                Some(FlagMatcher::new(self.flags.clone()))
+            flag_matcher: if !self.matcher.flags.is_empty() {
+                Some(FlagMatcher::new(self.matcher.flags.clone()))
             } else {
                 None
             },

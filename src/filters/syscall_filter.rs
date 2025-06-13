@@ -4,14 +4,15 @@ use nix::libc;
 
 use crate::{
     filters::{
+        event_matcher::ContextMatcher,
         flag_matcher::FlagMatcher,
-        matcher::StrMatcher,
-        path_matcher::{
-            PathMatchOp::{self, Prefix},
-            PathMatcher,
+        matcher::{
+            StrMatchOp::{self, Prefix},
+            StrMatcher,
         },
+        path_matcher::PathMatcher,
     },
-    syscall_common::{EXTRA_FLAGS, EXTRA_PATHNAME},
+    syscall_common::{EXTRA_ADDR, EXTRA_FLAGS, EXTRA_PATHNAME},
     syscall_event::SyscallEvent,
     trace_process::TraceProcess,
 };
@@ -57,7 +58,7 @@ impl FilterOutcome {
 pub(crate) struct SyscallFilter {
     pub syscall: HashSet<i64>,
     pub args: HashMap<u8, HashSet<u64>>,
-    pub path_matcher: Option<PathMatcher>,
+    pub context_matcher: Option<ContextMatcher>,
     pub flag_matcher: Option<FlagMatcher>,
     pub outcome: FilterOutcome,
 }
@@ -73,7 +74,7 @@ impl SyscallFilter {
         Self {
             syscall: [syscall].into(),
             args: args.clone(),
-            path_matcher: None,
+            context_matcher: None,
             flag_matcher: None,
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
@@ -87,7 +88,15 @@ impl SyscallFilter {
         Self {
             syscall: syscall.iter().cloned().collect(),
             args: HashMap::new(),
-            path_matcher: if path.is_empty() {None} else {  Some(PathMatcher::new(path.clone(), Prefix, false))},
+            context_matcher: if path.is_empty() {
+                None
+            } else {
+                Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                    path.clone(),
+                    Prefix,
+                    false,
+                )))
+            },
             flag_matcher: None,
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
@@ -101,13 +110,17 @@ impl SyscallFilter {
         syscalls: &[i64],
         allow: bool,
         paths: &Vec<String>,
-        path_match_op: PathMatchOp,
+        path_match_op: StrMatchOp,
     ) -> Self {
         let path_list = paths.clone();
         Self {
             syscall: syscalls.iter().cloned().collect(),
             args: HashMap::new(),
-            path_matcher: Some(PathMatcher::new(path_list, path_match_op, false)),
+            context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                path_list,
+                path_match_op,
+                false,
+            ))),
             flag_matcher: None,
             outcome: FilterOutcome {
                 action: if allow {
@@ -126,7 +139,7 @@ impl SyscallFilter {
         Self {
             syscall: [syscall].into(),
             args: HashMap::new(),
-            path_matcher: None,
+            context_matcher: None,
             flag_matcher: Some(FlagMatcher::new(flag_list)),
             outcome: FilterOutcome {
                 action: if allow {
@@ -144,13 +157,17 @@ impl SyscallFilter {
         syscall: i64,
         allow: bool,
         paths: &Vec<String>,
-        path_match_op: PathMatchOp,
+        path_match_op: StrMatchOp,
         flags: &Vec<String>,
     ) -> Self {
         Self {
             syscall: [syscall].into(),
             args: HashMap::new(),
-            path_matcher: Some(PathMatcher::new(paths.clone(), path_match_op, false)),
+            context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                paths.clone(),
+                path_match_op,
+                false,
+            ))),
             flag_matcher: Some(FlagMatcher::new(flags.clone())),
             outcome: FilterOutcome {
                 action: if allow {
@@ -168,7 +185,7 @@ impl SyscallFilter {
         Self {
             syscall: syscall.iter().cloned().collect(),
             args: HashMap::new(),
-            path_matcher: None,
+            context_matcher: None,
             flag_matcher: None,
             outcome: FilterOutcome {
                 action: FilterAction::Block(libc::ENOSYS),
@@ -191,7 +208,7 @@ impl SyscallFilter {
             }
         }
 
-        if let Some(ref path_matcher) = self.path_matcher {
+        if let Some(ContextMatcher::PathMatcher(ref path_matcher)) = self.context_matcher {
             if let Some(syscall_path) = syscall.extra_context.get(EXTRA_PATHNAME) {
                 if !path_matcher.matches(syscall_path) {
                     return false;
@@ -202,6 +219,15 @@ impl SyscallFilter {
                 }
             }
         }
+
+        if let Some(ContextMatcher::AddressMatcher(ref address_matcher)) = self.context_matcher {
+            if let Some(syscall_addr) = syscall.extra_context.get(EXTRA_ADDR) {
+                if !address_matcher.matches(syscall_addr) {
+                    return false;
+                }
+            }
+        }
+
         if let Some(ref flag_matcher) = self.flag_matcher {
             if let Some(flags) = syscall.extra_context.get(EXTRA_FLAGS) {
                 if !flag_matcher.matches(flags) {

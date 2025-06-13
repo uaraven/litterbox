@@ -9,7 +9,9 @@ what to do with the matching events.
     "args": {"<arg0>": [value1, value2, ..., valueN], ...},
     "match_path_created_by_process": true|false,
     "paths": ["<path1>", "<path2>", ..., "<pathN>"],
-    "path_op": "match|prefix|suffix|contains",
+    "addresses": ["<addr1>", ..., "<addrN>"],
+    "port": <port>,
+    "compare_op": "match|prefix|suffix|contains",
     "flags": "<flag>|<flag>|<flag>|<flag>",
     "outcome": {
         "action": "Allow|Block",
@@ -27,11 +29,13 @@ what to do with the matching events.
  - `args` - a map of argument index to possible values. Each syscall can have up to 6 arguments. If there are multiple values for a syscall argument, it's enough for any of them to match
  - `match_path_created_by_process` - if the path matches (see below), then record it as a match only if this path was created by the process. This allows to allow writes (and renames and deletes) of the files created by the process, for example, temporary files.
  - `paths` - list of paths to match. 
- - `path_op` - the operation with which to compare paths. One of:
-   - `match` - the operation path must match one of the paths on the list
-   - `prefix` - the operation path starts with one of the paths on the list
-   - `suffix` - the operation path ends with one of the paths on the list
-   - `contains` - the operation path contains with one of the paths on the list
+ - `addresses` - list of addresses to match. This could be partial addresses, like "192.168."
+ - `port` - port to match. Port 0 matches any port, or just omit this field
+ - `compare_op` - the operation with which to compare paths. One of:
+   - `match` - the operation path must match one of the paths/addresses on the list
+   - `prefix` - the operation path starts with one of the paths/addresses on the list
+   - `suffix` - the operation path ends with one of the paths/addresses on the list
+   - `contains` - the operation path contains with one of the paths/addresses on the list
  - `flags` - list of flags to match. Flags are strings matching one of the flags used in sycall. For example for `open` syscall this can be `O_RDONLY` or `O_CREAT`
  - `outcome` - what to do if the filter matches
    - `action` - what to do with the syscall. One of the values: 'Allow' or 'Block'
@@ -39,3 +43,5 @@ what to do with the matching events.
    - `tag` - if not null, tag the event with this string
    - `log` - if true will log the syscall
    
+
+You must specify only `paths` or `addresses`. If both are specified, the `addresses` field will be ignored

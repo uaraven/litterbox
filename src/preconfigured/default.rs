@@ -1,6 +1,6 @@
 use syscall_numbers::native;
 
-use crate::filters::path_matcher::PathMatchOp;
+use crate::filters::matcher::StrMatchOp;
 use crate::{
     FilteringLogger,
     filters::syscall_filter::{FilterOutcome, SyscallFilter},
@@ -42,7 +42,7 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
             native::SYS_openat,
             true,
             &allowed_path_list,
-            PathMatchOp::Prefix,
+            StrMatchOp::Prefix,
             &vec![String::from("O_CREAT")],
         ),
         SyscallFilter::with_paths(
@@ -65,7 +65,7 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
             ],
             true,
             &allowed_path_list,
-            PathMatchOp::Prefix,
+            StrMatchOp::Prefix,
         ),
         SyscallFilter::block(&[
             native::SYS_sendfile,
@@ -97,7 +97,7 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
         default_filters: vec![SyscallFilter {
             syscall: HashSet::new(),
             args: Default::default(),
-            path_matcher: None,
+            context_matcher: None,
             flag_matcher: None,
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
@@ -117,7 +117,6 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
     use syscall_numbers::x86_64;
 
     let allowed_path_list = get_allowed_paths();
-
 
     let filtered_syscalls = vec![
         SyscallFilter::stdio_allow(x86_64::SYS_write),
@@ -151,15 +150,18 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
             &allowed_path_list,
             PathMatchOp::Prefix,
         ),
-        SyscallFilter::allow(&[
-            x86_64::SYS_open,
-            x86_64::SYS_openat,
-            x86_64::SYS_openat2,
-            x86_64::SYS_close,
-            x86_64::SYS_read,
-            x86_64::SYS_readv,
-            x86_64::SYS_recvmmsg,
-        ], &vec![]),
+        SyscallFilter::allow(
+            &[
+                x86_64::SYS_open,
+                x86_64::SYS_openat,
+                x86_64::SYS_openat2,
+                x86_64::SYS_close,
+                x86_64::SYS_read,
+                x86_64::SYS_readv,
+                x86_64::SYS_recvmmsg,
+            ],
+            &vec![],
+        ),
         SyscallFilter::block(&[
             x86_64::SYS_write,
             x86_64::SYS_writev,
