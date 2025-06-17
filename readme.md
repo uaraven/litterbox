@@ -2,21 +2,25 @@
 
 <img src="logo.png" style="width:33%;">
 
-_Litterbox_ is a syscall inspection and sandboxing tool, similar to strace, but with enhanced capabilities. It not only traces system calls but also enforces runtime restrictions by blocking potentially unsafe operations—such as filesystem writes, network access, and process spawning.
+_Litterbox_ is a sandboxing and syscall tracing tool designed for analyzing potentially malicious applications in a controlled environment.
+
+It allows you to run an application while blocking unsafe system calls — such as file modifications, network activity, and process spawning — and provides detailed syscall logs with enhanced context.
 
 ## Sandbox
 
-Like `strace`, _Litterbox_ allows tracing the syscalls and blocking them. Syscalls can be filtered based on file paths, even for operations like read or write that don't include them directly. This is achieved by tracking open/close calls to associate file descriptors with paths. Similar tracking is used for sockets and IP addresses.
+Like `strace`, _Litterbox_ allows tracing the syscalls and blocking them. Syscalls can be filtered based on file paths or IP addresses, even for syscalls like `read`, `write` or `sendmsg`, that don't include this information. This is achieved by tracking open/close calls to associate file descriptors with paths. Similar tracking is used for sockets and IP addresses.
 
-This functionality allows creation of a sandbox to analyze potentially malicious applications without allowing them to modify the local environment or "call home".
+This functionality allows creation of a sandbox to analyze potentially malicious applications without allowing them to modify the local environment or establish network connections.
 
 ## Syscall Tracing
 
-_Litterbox_ can log syscalls in plain text or JSONL formats, enriching output with contextual data (e.g., file paths for descriptors). Tracing can be selectively enabled:
+Litterbox provides flexible syscall logging, with support for:
 
-- Filter syscalls by name, file path, or IP address.
-- Exclude startup noise by starting trace only after a specific syscall.
-- Specify which syscalls to block and define custom error codes for blocked syscalls.
+ - Output in plain text or [JSONL](https://jsonlines.org/) formats
+ - Filtering by syscall name, file path, or IP address
+ - Defining custom error codes for blocked syscalls
+ - Starting trace after a specific syscall (to skip initialization noise)
+ - Tagging syscall events for easier post-processing
 
 ### Configuration
 
@@ -25,6 +29,11 @@ _Litterbox_ supports two modes of configuration:
  what to do with the filtered syscalls. Configuration can be defined in a JSON file and reused.
  See [filters doc](docs/filters.md) for more details.
  - Simplified filtering for file, network and process operations. Rest of the syscalls is ignored (but can be logged)
+
+
+### Running
+
+TBD
 
 ## License
 
