@@ -62,7 +62,7 @@ pub(crate) fn restrictive_filters(logger: Box<dyn SyscallLogger>) -> FilteringLo
         default_filters: vec![SyscallFilter {
             syscall: HashSet::new(),
             args: Default::default(),
-            path_matcher: None,
+            context_matcher: None,
             flag_matcher: None,
             outcome: FilterOutcome {
                 action: FilterAction::Allow,

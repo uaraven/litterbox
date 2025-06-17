@@ -25,9 +25,8 @@ use filter_listener::FilteringLogger;
 use loggers::text_logger::TextLogger;
 use nix::sys::ptrace;
 use nix::unistd::{ForkResult, fork};
-use preconfigured::default::default_filters;
 
-use crate::filter_loader::{Error, filters_from_args};
+use crate::filter_loader::filters_from_args;
 
 fn main() {
     let cli = Cli::parse();

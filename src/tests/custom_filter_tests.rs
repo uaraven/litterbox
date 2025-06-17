@@ -1,12 +1,17 @@
-use std::collections::HashMap;
-
+#[cfg(test)]
 use nix::libc;
+#[cfg(test)]
+use std::collections::HashMap;
+#[cfg(test)]
 use syscall_numbers::native;
 
+#[cfg(test)]
 use crate::{
-    FilteringLogger, TextLogger,
+    FilteringLogger,
     filters::{
-        path_matcher::{PathMatchOp, PathMatcher},
+        context_matcher::ContextMatcher,
+        matcher::StrMatchOp,
+        path_matcher::PathMatcher,
         syscall_filter::{FilterOutcome, SyscallFilter},
     },
     regs::Regs,
@@ -20,11 +25,11 @@ fn test_block_open_in_forbidden_folder() {
     let block_open = SyscallFilter {
         syscall: [native::SYS_write as i64].into(),
         args: Default::default(),
-        path_matcher: Some(PathMatcher::new(
+        context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
             vec!["/forbidden_folder".to_string()],
-            PathMatchOp::Prefix,
+            StrMatchOp::Prefix,
             false,
-        )),
+        ))),
         flag_matcher: None,
         outcome: FilterOutcome {
             action: crate::filters::syscall_filter::FilterAction::Block(libc::ENOSYS),
@@ -74,11 +79,11 @@ fn test_dont_block_open_in_non_forbidden_folder() {
     let block_open = SyscallFilter {
         syscall: [native::SYS_write as i64].into(),
         args: Default::default(),
-        path_matcher: Some(PathMatcher::new(
+        context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
             vec!["/forbidden_folder".to_string()],
-            PathMatchOp::Prefix,
+            StrMatchOp::Prefix,
             false,
-        )),
+        ))),
         flag_matcher: None,
         outcome: FilterOutcome {
             action: crate::filters::syscall_filter::FilterAction::Block(libc::ENOSYS),
@@ -127,11 +132,11 @@ fn test_dont_block_open_in_forbidden_folder_when_created_by_this_process() {
     let block_open = SyscallFilter {
         syscall: [native::SYS_write as i64].into(),
         args: Default::default(),
-        path_matcher: Some(PathMatcher::new(
+        context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
             vec!["/forbidden_folder".to_string()],
-            PathMatchOp::Prefix,
+            StrMatchOp::Prefix,
             true,
-        )),
+        ))),
         flag_matcher: None,
         outcome: FilterOutcome {
             action: crate::filters::syscall_filter::FilterAction::Block(libc::ENOSYS),

@@ -1,22 +1,16 @@
-use super::matcher::StrMatcher;
+use crate::filters::matcher::StrMatchOp;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum PathMatchOp {
-    Exact,
-    Prefix,
-    Suffix,
-    Contains,
-}
+use super::matcher::StrMatcher;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PathMatcher {
     pub paths: Vec<String>,
-    pub match_op: PathMatchOp,
+    pub match_op: StrMatchOp,
     pub only_created_by_process: bool,
 }
 
 impl PathMatcher {
-    pub fn new(paths: Vec<String>, match_op: PathMatchOp, created_by_process: bool) -> Self {
+    pub fn new(paths: Vec<String>, match_op: StrMatchOp, created_by_process: bool) -> Self {
         Self {
             paths,
             match_op,
@@ -28,10 +22,10 @@ impl PathMatcher {
 impl StrMatcher for PathMatcher {
     fn matches(&self, path: &String) -> bool {
         match self.match_op {
-            PathMatchOp::Exact => self.paths.contains(&path),
-            PathMatchOp::Prefix => self.paths.iter().any(|p| path.starts_with(p)),
-            PathMatchOp::Suffix => self.paths.iter().any(|p| path.ends_with(p)),
-            PathMatchOp::Contains => self.paths.iter().any(|p| path.contains(p)),
+            StrMatchOp::Exact => self.paths.contains(&path),
+            StrMatchOp::Prefix => self.paths.iter().any(|p| path.starts_with(p)),
+            StrMatchOp::Suffix => self.paths.iter().any(|p| path.ends_with(p)),
+            StrMatchOp::Contains => self.paths.iter().any(|p| path.contains(p)),
         }
     }
 }

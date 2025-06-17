@@ -1,25 +1,36 @@
-use std::collections::{HashMap, HashSet};
-use std::vec;
+#[cfg(test)]
+use std::{
+    collections::{HashMap, HashSet},
+    vec,
+};
 
-use nix::libc::user_regs_struct;
-use nix::unistd::Pid;
+#[cfg(test)]
+use crate::{
+    FilteringLogger,
+    filter_listener::SyscallFilterTrigger,
+    filters::{
+        context_matcher::ContextMatcher,
+        flag_matcher::FlagMatcher,
+        matcher::StrMatchOp,
+        path_matcher::PathMatcher,
+        syscall_filter::{FilterAction, FilterOutcome, SyscallFilter},
+    },
+    regs::Regs,
+    syscall_common::{EXTRA_FLAGS, EXTRA_PATHNAME},
+    syscall_event::{SyscallEvent, SyscallEventListener, SyscallStopType},
+    trace_process::TraceProcess,
+};
+#[cfg(test)]
+use nix::{libc::user_regs_struct, unistd::Pid};
+#[cfg(test)]
 use syscall_numbers::native;
 
-use crate::filter_listener::SyscallFilterTrigger;
-use crate::filters::flag_matcher::FlagMatcher;
-use crate::filters::path_matcher::{PathMatchOp, PathMatcher};
-use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter};
-use crate::regs::Regs;
-use crate::syscall_common::{EXTRA_FLAGS, EXTRA_PATHNAME};
-use crate::syscall_event::SyscallEventListener;
-use crate::syscall_event::{SyscallEvent, SyscallStopType};
-use crate::trace_process::TraceProcess;
-use crate::{FilteringLogger, TextLogger};
-
+#[cfg(test)]
 fn fake_syscall_id(_pid: Pid, _regs: user_regs_struct, _new_id: u64) -> Result<(), nix::Error> {
     return Ok(());
 }
 
+#[cfg(test)]
 fn make_test_event(id: u64, extra_path: Option<&str>) -> SyscallEvent {
     let mut extra_context: HashMap<&'static str, String> = HashMap::new();
     if let Some(path) = extra_path {
@@ -89,7 +100,7 @@ fn test_filtering_logger_with_custom_filter() {
     let filter = SyscallFilter {
         syscall: [123].into(),
         args: Default::default(),
-        path_matcher: None,
+        context_matcher: None,
         flag_matcher: None,
         outcome: FilterOutcome {
             action: FilterAction::Block(1),
@@ -115,7 +126,7 @@ fn test_filtering_logger_default_syscall_id_filters() {
             tag: Some("allowed".to_string()),
         },
         args: Default::default(),
-        path_matcher: None,
+        context_matcher: None,
         flag_matcher: None,
     };
     let mut logger = FilteringLogger::new(vec![filter], None, None);
@@ -136,7 +147,7 @@ fn test_handle_filter_non_matching() {
             tag: None,
         },
         args: Default::default(),
-        path_matcher: None,
+        context_matcher: None,
         flag_matcher: None,
     };
     let mut logger = FilteringLogger::new(vec![filter], None, None);
@@ -156,7 +167,7 @@ fn test_handle_filter_matching_by_flag() {
             tag: Some("blocked".to_string()),
         },
         args: Default::default(),
-        path_matcher: None,
+        context_matcher: None,
         flag_matcher: Some(FlagMatcher::new(vec!["O_CREAT".to_string()])),
     };
     let mut logger = FilteringLogger::new(vec![filter], None, None);
@@ -208,11 +219,11 @@ fn test_handle_filter_matching_by_path_prefix() {
             tag: Some("blocked".to_string()),
         },
         args: Default::default(),
-        path_matcher: Some(PathMatcher::new(
+        context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
             vec!["/tmp/".to_string()],
-            PathMatchOp::Prefix,
+            StrMatchOp::Prefix,
             false,
-        )),
+        ))),
         flag_matcher: None,
     };
     let mut logger = FilteringLogger::new(vec![filter], None, None);
