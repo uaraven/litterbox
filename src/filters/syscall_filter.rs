@@ -4,7 +4,7 @@ use nix::libc;
 
 use crate::{
     filters::{
-        event_matcher::ContextMatcher,
+        context_matcher::ContextMatcher,
         flag_matcher::FlagMatcher,
         matcher::{
             StrMatchOp::{self, Prefix},

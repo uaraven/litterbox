@@ -1,5 +1,7 @@
 #[cfg(test)]
-use crate::filters::{dto::SyscallFilterDto, matcher::StrMatchOp, syscall_filter::FilterAction};
+use crate::filters::{
+    dto::SyscallFilterDto, dto::parse_compare_op, matcher::StrMatchOp, syscall_filter::FilterAction,
+};
 #[cfg(test)]
 use serde_json::json;
 #[cfg(test)]
@@ -11,10 +13,12 @@ fn base_dto_json() -> serde_json::Value {
         "matcher":{
             "syscall_names": ["openat", "read"],
             "args": { "0": [1, 2], "1": [3] },
-            "paths": ["/tmp/file", "/var/log"],
-            "compare_op": "exact",
+            "paths": {
+                "paths": ["/tmp/file", "/var/log"],
+                "compare_op": "exact",
+                "match_created_by_process": true,
+            },
             "flags": ["O_RDONLY"],
-            "match_path_created_by_process": true,
         },
         "outcome": {
             "tag": "test_tag",
@@ -27,21 +31,12 @@ fn base_dto_json() -> serde_json::Value {
 
 #[test]
 fn test_parse_path_op_valid() {
-    let mut dto = SyscallFilterDto::from_json(base_dto_json().to_string()).unwrap();
-    dto.matcher.compare_op = "prefix".to_string();
-    dto.matcher.compare_op = "suffix".to_string();
-    assert_eq!(dto.parse_path_op().unwrap(), StrMatchOp::Suffix);
-    dto.matcher.compare_op = "contains".to_string();
-    assert_eq!(dto.parse_path_op().unwrap(), StrMatchOp::Contains);
-    dto.matcher.compare_op = "exact".to_string();
-    assert_eq!(dto.parse_path_op().unwrap(), StrMatchOp::Exact);
-}
-
-#[test]
-fn test_parse_path_op_invalid() {
-    let mut dto = SyscallFilterDto::from_json(base_dto_json().to_string()).unwrap();
-    dto.matcher.compare_op = "invalid".to_string();
-    assert!(dto.parse_path_op().is_err());
+    // let mut dto = SyscallFilterDto::from_json(base_dto_json().to_string()).unwrap();
+    assert_eq!(parse_compare_op("prefix").unwrap(), StrMatchOp::Prefix);
+    assert_eq!(parse_compare_op("exact").unwrap(), StrMatchOp::Exact);
+    assert_eq!(parse_compare_op("suffix").unwrap(), StrMatchOp::Suffix);
+    assert_eq!(parse_compare_op("contains").unwrap(), StrMatchOp::Contains);
+    assert!(parse_compare_op("invalid").is_err());
 }
 
 #[test]
@@ -100,7 +95,7 @@ fn test_to_syscall_filter_success() {
 #[test]
 fn test_to_syscall_filter_empty_paths_and_flags() {
     let mut json = base_dto_json();
-    json["matcher"]["paths"] = json!([]);
+    json["matcher"]["paths"] = json!(null);
     json["matcher"]["flags"] = json!([]);
     let dto = SyscallFilterDto::from_json(json.to_string()).unwrap();
     let filter = dto.to_syscall_filter().unwrap();
@@ -120,7 +115,7 @@ fn test_to_syscall_filter_empty_tag() {
 #[test]
 fn test_to_syscall_filter_invalid_path_op() {
     let mut json = base_dto_json();
-    json["matcher"]["compare_op"] = json!("invalid");
+    json["matcher"]["paths"]["compare_op"] = json!("invalid");
     let dto = SyscallFilterDto::from_json(json.to_string()).unwrap();
     assert!(dto.to_syscall_filter().is_err());
 }

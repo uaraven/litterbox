@@ -1,7 +1,7 @@
 #[cfg(test)]
-use crate::filters::{dto::SyscallFilterDto, syscall_filter::FilterAction};
-#[cfg(test)]
-use crate::filters::{event_matcher::ContextMatcher, matcher::StrMatchOp};
+use crate::filters::{
+    context_matcher::ContextMatcher, dto::SyscallFilterDto, syscall_filter::FilterAction,
+};
 #[cfg(test)]
 use serde_json::json;
 
@@ -11,10 +11,12 @@ fn base_json() -> serde_json::Value {
         "matcher": {
             "syscall_names": ["openat"],
             "args": { "0": [1, 2], "1": [3] },
-            "paths": ["/tmp/file", "/var/log"],
-            "compare_op": "exact",
+            "paths": {
+                "paths": ["/tmp/file", "/var/log"],
+                "compare_op": "exact",
+                "match_created_by_process": true,
+            },
             "flags": ["O_RDONLY", "O_CREAT"],
-            "match_path_created_by_process": true,
         },
         "outcome": {
             "tag": "test",
@@ -32,37 +34,13 @@ fn test_from_json_success() {
     assert!(dto.is_ok());
     let dto = dto.unwrap();
     assert_eq!(*dto.matcher.syscall_names.first().unwrap(), "openat");
-    assert_eq!(dto.matcher.paths.len(), 2);
+    let path_matcher = dto.matcher.paths.unwrap();
+    assert_eq!(path_matcher.paths.len(), 2);
     assert_eq!(dto.matcher.flags, vec!["O_RDONLY", "O_CREAT"]);
-    assert!(dto.matcher.match_path_created_by_process);
+    assert!(path_matcher.match_created_by_process);
     assert_eq!(dto.outcome.tag, "test");
     assert!(dto.outcome.log);
     assert_eq!(dto.outcome.action, "allow");
-}
-
-#[test]
-fn test_parse_path_op_variants() {
-    let mut json = base_json();
-    for (op, expected) in [
-        ("exact", StrMatchOp::Exact),
-        ("prefix", StrMatchOp::Prefix),
-        ("suffix", StrMatchOp::Suffix),
-        ("contains", StrMatchOp::Contains),
-    ] {
-        json["matcher"]["compare_op"] = json!(op);
-        let dto: SyscallFilterDto = serde_json::from_value(json.clone()).unwrap();
-        let parsed = dto.parse_path_op().unwrap();
-        assert_eq!(parsed, expected);
-    }
-}
-
-#[test]
-fn test_parse_path_op_invalid() {
-    let mut json = base_json();
-    json["matcher"]["compare_op"] = json!("invalid");
-    let dto: SyscallFilterDto = serde_json::from_value(json).unwrap();
-    let err = dto.parse_path_op().unwrap_err();
-    assert!(err.message.contains("Invalid path match operation"));
 }
 
 #[test]
@@ -127,7 +105,7 @@ fn test_to_syscall_filter_success() {
 #[test]
 fn test_to_syscall_filter_empty_paths_and_flags() {
     let mut json = base_json();
-    json["matcher"]["paths"] = json!([]);
+    json["matcher"]["paths"] = json!(null);
     json["matcher"]["flags"] = json!([]);
     let dto: SyscallFilterDto = serde_json::from_value(json).unwrap();
     let filter = dto.to_syscall_filter().unwrap();
@@ -147,10 +125,10 @@ fn test_to_syscall_filter_empty_tag() {
 #[test]
 fn test_to_syscall_filter_addresses() {
     let mut json = base_json();
-    json["matcher"]["paths"] = json!([]);
+    json["matcher"]["paths"] = json!(null);
     json["matcher"]["flags"] = json!([]);
-    json["matcher"]["addresses"] = json!(["192.168.10.1", "172.10."]);
-    json["matcher"]["port"] = json!(53);
+    json["matcher"]["addresses"] =
+        json!({"addresses":["192.168.10.1", "172.10."], "port": 53, "compare_op": "exact"});
     let dto: SyscallFilterDto = serde_json::from_value(json).unwrap();
     let filter = dto.to_syscall_filter().unwrap();
     assert!(filter.flag_matcher.is_none());

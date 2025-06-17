@@ -9,7 +9,7 @@ use crate::{
     FilteringLogger,
     filter_listener::SyscallFilterTrigger,
     filters::{
-        event_matcher::ContextMatcher,
+        context_matcher::ContextMatcher,
         flag_matcher::FlagMatcher,
         matcher::StrMatchOp,
         path_matcher::PathMatcher,

@@ -9,7 +9,7 @@ use syscall_numbers::native;
 use crate::{
     FilteringLogger,
     filters::{
-        event_matcher::ContextMatcher,
+        context_matcher::ContextMatcher,
         matcher::StrMatchOp,
         path_matcher::PathMatcher,
         syscall_filter::{FilterOutcome, SyscallFilter},

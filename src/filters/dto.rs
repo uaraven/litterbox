@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    ops::Add,
-};
+use std::collections::{HashMap, HashSet};
 
 use serde::Deserialize;
 
@@ -9,7 +6,7 @@ use crate::{
     FilteringLogger,
     filter_listener::SyscallFilterTrigger,
     filters::{
-        address_matcher::AddressMatcher, event_matcher::ContextMatcher, matcher::StrMatchOp,
+        address_matcher::AddressMatcher, context_matcher::ContextMatcher, matcher::StrMatchOp,
     },
     loggers::syscall_logger::SyscallLogger,
 };
@@ -35,17 +32,26 @@ pub(crate) struct FilterOutcomeDto {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub(crate) struct AddressMatcherDto {
+    pub addresses: Vec<String>,
+    pub compare_op: String,
+    pub port: Option<u16>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct PathMatcherDto {
+    pub paths: Vec<String>,
+    pub compare_op: String,
+    pub match_created_by_process: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub(crate) struct SyscallMatcher {
     pub syscall_names: Vec<String>,
     pub args: HashMap<u8, Vec<u64>>,
-    #[serde(default)]
-    pub paths: Vec<String>,
-    #[serde(default)]
-    pub addresses: Vec<String>,
-    pub port: Option<u16>,
-    pub compare_op: String,
+    pub paths: Option<PathMatcherDto>,
+    pub addresses: Option<AddressMatcherDto>,
     pub flags: Vec<String>,
-    pub match_path_created_by_process: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -116,21 +122,21 @@ pub(crate) fn load_syscall_filter(
     ))
 }
 
+pub(crate) fn parse_compare_op(compare_op: &str) -> Result<StrMatchOp, ParsingError> {
+    match compare_op {
+        "exact" => Ok(StrMatchOp::Exact),
+        "prefix" => Ok(StrMatchOp::Prefix),
+        "suffix" => Ok(StrMatchOp::Suffix),
+        "contains" => Ok(StrMatchOp::Contains),
+        _ => Err(ParsingError {
+            message: format!("Invalid path match operation: {}", compare_op),
+        }),
+    }
+}
+
 impl SyscallFilterDto {
     pub fn from_json(json: String) -> Result<Self, serde_json::Error> {
         serde_json::from_str(json.as_str())
-    }
-
-    pub fn parse_path_op(&self) -> Result<StrMatchOp, ParsingError> {
-        match self.matcher.compare_op.as_str() {
-            "exact" => Ok(StrMatchOp::Exact),
-            "prefix" => Ok(StrMatchOp::Prefix),
-            "suffix" => Ok(StrMatchOp::Suffix),
-            "contains" => Ok(StrMatchOp::Contains),
-            _ => Err(ParsingError {
-                message: format!("Invalid path match operation: {}", self.matcher.compare_op),
-            }),
-        }
     }
 
     pub fn parse_outcome_action(&self) -> Result<FilterAction, ParsingError> {
@@ -168,23 +174,28 @@ impl SyscallFilterDto {
             .map(|(k, v)| (*k, v.iter().cloned().collect()))
             .collect();
 
-        let path_match_op = self.parse_path_op()?;
         let outcome_action = self.parse_outcome_action()?;
 
         Ok(SyscallFilter {
             syscall: syscall_ids,
             args: arg_map,
-            context_matcher: if !self.matcher.paths.is_empty() {
+            context_matcher: if let Some(path_matcher) = &self.matcher.paths {
+                let path_match_op = parse_compare_op(path_matcher.compare_op.as_str())?;
                 Some(ContextMatcher::PathMatcher(PathMatcher::new(
-                    self.matcher.paths.clone(),
+                    path_matcher.paths.clone(),
                     path_match_op,
-                    self.matcher.match_path_created_by_process,
+                    path_matcher.match_created_by_process,
                 )))
-            } else if !self.matcher.addresses.is_empty() {
+            } else if let Some(address_matcher) = &self.matcher.addresses {
+                let addr_match_op = parse_compare_op(address_matcher.compare_op.as_str())?;
                 Some(ContextMatcher::AddressMatcher(AddressMatcher::new(
-                    self.matcher.addresses.iter().map(|s| s.as_str()).collect(),
-                    path_match_op,
-                    self.matcher.port,
+                    address_matcher
+                        .addresses
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect(),
+                    addr_match_op,
+                    address_matcher.port,
                 )))
             } else {
                 None
