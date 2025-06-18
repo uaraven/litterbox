@@ -65,9 +65,15 @@ fn test_default_filtering_logger_primed() {
 
 #[test]
 fn test_trigger_event_blocks_until_primed() {
-    let trigger = SyscallFilterTrigger {
-        syscall_id: 42,
-        file_path: Some("/tmp/trigger".to_string()),
+    let trigger = SyscallMatcher {
+        syscall: HashSet::from([42]),
+        args: HashMap::default(),
+        context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
+            vec!["/tmp/trigger".to_string()],
+            StrMatchOp::Exact,
+            false
+        ))),
+        flag_matcher: None
     };
     let mut logger = FilteringLogger::new(vec![], Some(trigger), None);
     let proc = TraceProcess::new(Pid::from_raw(1000));

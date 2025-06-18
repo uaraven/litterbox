@@ -12,6 +12,7 @@ use crate::{
     syscall_event::{SyscallEvent, SyscallEventListener},
     trace_process::TraceProcess,
 };
+use crate::filters::syscall_filter::SyscallMatcher;
 
 /// This struct describes a syscall that primes the filter. Any syscall before the trigger syscall
 /// will be ignored. After the trigger syscall, the filters will be applied to all syscalls.
@@ -35,7 +36,7 @@ impl SyscallFilterTrigger {
 
 pub(crate) struct FilteringLogger {
     pub primed: bool,
-    pub trigger_event: Option<SyscallFilterTrigger>,
+    pub trigger_event: Option<SyscallMatcher>,
     pub filters: HashMap<u64, Vec<SyscallFilter>>,
     pub default_filters: Vec<SyscallFilter>,
     pub logger: Option<Box<dyn SyscallLogger>>,
@@ -50,7 +51,7 @@ impl FilteringLogger {
 impl FilteringLogger {
     pub fn new(
         filters: Vec<SyscallFilter>,
-        trigger_event: Option<SyscallFilterTrigger>,
+        trigger_event: Option<SyscallMatcher>,
         logger: Option<Box<dyn SyscallLogger>>,
     ) -> Self {
         let mut filter_map: HashMap<u64, Vec<SyscallFilter>> = HashMap::new();
@@ -108,7 +109,7 @@ impl SyscallEventListener for FilteringLogger {
     fn process_event(&mut self, proc: &TraceProcess, event: &SyscallEvent) -> Option<SyscallEvent> {
         if !self.primed {
             if let Some(ref trigger) = self.trigger_event {
-                if trigger.matches(event) {
+                if trigger.matches(proc, event) {
                     self.primed = true;
                 } else {
                     return Some(event.clone());

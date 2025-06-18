@@ -4,14 +4,12 @@ use serde::Deserialize;
 
 use crate::{
     FilteringLogger,
-    filter_listener::SyscallFilterTrigger,
     filters::{
         address_matcher::AddressMatcher, context_matcher::ContextMatcher, matcher::StrMatchOp,
-        syscall_filter::SyscallMatcher as FilterSyscallMatcher,
+        syscall_filter::SyscallMatcher,
     },
     loggers::syscall_logger::SyscallLogger,
 };
-
 use super::{
     flag_matcher::FlagMatcher,
     path_matcher::PathMatcher,
@@ -47,7 +45,7 @@ pub(crate) struct PathMatcherDto {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct SyscallMatcher {
+pub(crate) struct SyscallMatcherDto {
     pub syscall_names: Vec<String>,
     pub args: HashMap<u8, Vec<u64>>,
     pub paths: Option<PathMatcherDto>,
@@ -55,31 +53,66 @@ pub(crate) struct SyscallMatcher {
     pub flags: Vec<String>,
 }
 
+impl SyscallMatcherDto {
+    pub fn to_syscall_matcher(&self) -> Result<SyscallMatcher, ParsingError> {
+        let syscall_ids = self
+            .syscall_names
+            .iter()
+            .map(|f| syscall_id_by_name(f.as_str()))
+            .filter(|f| f.is_some())
+            .map(|f| f.unwrap() as i64)
+            .collect::<HashSet<_>>();
+
+        let arg_map = self
+            .args
+            .iter()
+            .map(|(k, v)| (*k, v.iter().cloned().collect()))
+            .collect();
+
+        let matcher = SyscallMatcher {
+            syscall: syscall_ids,
+            args: arg_map,
+            context_matcher: if let Some(path_matcher) = &self.paths {
+                let path_match_op = parse_compare_op(path_matcher.compare_op.as_str())?;
+                Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                    path_matcher.paths.clone(),
+                    path_match_op,
+                    path_matcher.match_created_by_process,
+                )))
+            } else if let Some(address_matcher) = &self.addresses {
+                let addr_match_op = parse_compare_op(address_matcher.compare_op.as_str())?;
+                Some(ContextMatcher::AddressMatcher(AddressMatcher::new(
+                    address_matcher
+                        .addresses
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect(),
+                    addr_match_op,
+                    address_matcher.port,
+                )))
+            } else {
+                None
+            },
+            flag_matcher: if !self.flags.is_empty() {
+                Some(FlagMatcher::new(self.flags.clone()))
+            } else {
+                None
+            },
+        };
+        Ok(matcher)
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct SyscallFilterDto {
-    pub matcher: SyscallMatcher,
+    pub matcher: SyscallMatcherDto,
     pub outcome: FilterOutcomeDto,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct SyscallFilterTriggerDto {
-    pub syscall_id: i64,
-    pub file_path: Option<String>,
-}
-
-impl SyscallFilterTriggerDto {
-    pub fn to_trigger(&self) -> SyscallFilterTrigger {
-        SyscallFilterTrigger {
-            syscall_id: self.syscall_id,
-            file_path: self.file_path.clone(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct SyscallFilterConfig {
     pub filters: Vec<SyscallFilterDto>,
-    pub trigger: Option<SyscallFilterTriggerDto>,
+    pub trigger: Option<SyscallMatcherDto>,
 }
 
 /// Load the syscall filter configuration from a JSON file and validates the filters.
@@ -118,7 +151,7 @@ pub(crate) fn load_syscall_filter(
         .collect::<Vec<_>>();
     Ok(FilteringLogger::new(
         filters,
-        config.trigger.map(|t| t.to_trigger()),
+        config.trigger.map(|t| t.to_syscall_matcher().unwrap()), // TODO: Maybe handle the error?
         logger,
     ))
 }
@@ -159,55 +192,10 @@ impl SyscallFilterDto {
     }
 
     pub fn to_syscall_filter(&self) -> Result<SyscallFilter, ParsingError> {
-        let syscall_ids = self
-            .matcher
-            .syscall_names
-            .iter()
-            .map(|f| syscall_id_by_name(f.as_str()))
-            .filter(|f| f.is_some())
-            .map(|f| f.unwrap() as i64)
-            .collect::<HashSet<_>>();
-
-        let arg_map = self
-            .matcher
-            .args
-            .iter()
-            .map(|(k, v)| (*k, v.iter().cloned().collect()))
-            .collect();
-
         let outcome_action = self.parse_outcome_action()?;
 
         Ok(SyscallFilter {
-            matcher: FilterSyscallMatcher {
-                syscall: syscall_ids,
-                args: arg_map,
-                context_matcher: if let Some(path_matcher) = &self.matcher.paths {
-                    let path_match_op = parse_compare_op(path_matcher.compare_op.as_str())?;
-                    Some(ContextMatcher::PathMatcher(PathMatcher::new(
-                        path_matcher.paths.clone(),
-                        path_match_op,
-                        path_matcher.match_created_by_process,
-                    )))
-                } else if let Some(address_matcher) = &self.matcher.addresses {
-                    let addr_match_op = parse_compare_op(address_matcher.compare_op.as_str())?;
-                    Some(ContextMatcher::AddressMatcher(AddressMatcher::new(
-                        address_matcher
-                            .addresses
-                            .iter()
-                            .map(|s| s.as_str())
-                            .collect(),
-                        addr_match_op,
-                        address_matcher.port,
-                    )))
-                } else {
-                    None
-                },
-                flag_matcher: if !self.matcher.flags.is_empty() {
-                    Some(FlagMatcher::new(self.matcher.flags.clone()))
-                } else {
-                    None
-                },
-            },
+            matcher: self.matcher.to_syscall_matcher().unwrap(),
             outcome: FilterOutcome {
                 action: outcome_action,
                 tag: if self.outcome.tag.is_empty() {
