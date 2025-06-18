@@ -125,7 +125,7 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
             native::SYS_openat,
             true,
             &allowed_path_list,
-            PathMatchOp::Prefix,
+            StrMatchOp::Prefix,
             &vec![String::from("O_CREAT")],
         ),
         SyscallFilter::with_paths(
@@ -148,7 +148,7 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
             ],
             true,
             &allowed_path_list,
-            PathMatchOp::Prefix,
+            StrMatchOp::Prefix,
         ),
         SyscallFilter::allow(
             &[
@@ -214,7 +214,7 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
         default_filters: vec![SyscallFilter {
             syscall: HashSet::new(),
             args: Default::default(),
-            path_matcher: None,
+            context_matcher: None,
             flag_matcher: None,
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
