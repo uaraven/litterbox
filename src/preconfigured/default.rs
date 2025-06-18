@@ -9,6 +9,7 @@ use crate::{
 use std::collections::HashSet;
 
 use crate::filters::{syscall_filter::FilterAction, utils::group_filters_by_syscall};
+use crate::filters::syscall_filter::SyscallMatcher;
 
 fn get_allowed_paths() -> Vec<String> {
     let home = std::env::var("HOME")
@@ -212,10 +213,12 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
         trigger_event: None,
         filters: filter_map,
         default_filters: vec![SyscallFilter {
-            syscall: HashSet::new(),
-            args: Default::default(),
-            context_matcher: None,
-            flag_matcher: None,
+            matcher: SyscallMatcher {
+                syscall: HashSet::new(),
+                args: Default::default(),
+                context_matcher: None,
+                flag_matcher: None,
+            },
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
                 log: false,

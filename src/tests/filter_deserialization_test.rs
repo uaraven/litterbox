@@ -90,10 +90,10 @@ fn test_to_syscall_filter_success() {
     let filter = dto.to_syscall_filter();
     assert!(filter.is_ok());
     let filter = filter.unwrap();
-    assert_eq!(filter.syscall.len(), 1);
-    assert!(filter.context_matcher.is_some());
-    assert!(filter.flag_matcher.is_some());
-    if let Some(ContextMatcher::PathMatcher(path_matcher)) = filter.context_matcher {
+    assert_eq!(filter.matcher.syscall.len(), 1);
+    assert!(filter.matcher.context_matcher.is_some());
+    assert!(filter.matcher.flag_matcher.is_some());
+    if let Some(ContextMatcher::PathMatcher(path_matcher)) = filter.matcher.context_matcher {
         assert!(path_matcher.only_created_by_process);
     } else {
         panic!("Expected PathMatcher in context_matcher");
@@ -109,8 +109,8 @@ fn test_to_syscall_filter_empty_paths_and_flags() {
     json["matcher"]["flags"] = json!([]);
     let dto: SyscallFilterDto = serde_json::from_value(json).unwrap();
     let filter = dto.to_syscall_filter().unwrap();
-    assert!(filter.context_matcher.is_none());
-    assert!(filter.flag_matcher.is_none());
+    assert!(filter.matcher.context_matcher.is_none());
+    assert!(filter.matcher.flag_matcher.is_none());
 }
 
 #[test]
@@ -131,8 +131,8 @@ fn test_to_syscall_filter_addresses() {
         json!({"addresses":["192.168.10.1", "172.10."], "port": 53, "compare_op": "exact"});
     let dto: SyscallFilterDto = serde_json::from_value(json).unwrap();
     let filter = dto.to_syscall_filter().unwrap();
-    assert!(filter.flag_matcher.is_none());
-    if let Some(ContextMatcher::AddressMatcher(addr_matcher)) = filter.context_matcher {
+    assert!(filter.matcher.flag_matcher.is_none());
+    if let Some(ContextMatcher::AddressMatcher(addr_matcher)) = filter.matcher.context_matcher {
         assert_eq!(addr_matcher.addresses.len(), 2);
         assert_eq!(addr_matcher.port, Some(53));
     } else {

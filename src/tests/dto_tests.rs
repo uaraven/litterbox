@@ -81,13 +81,13 @@ fn test_parse_outcome_action_invalid() {
 fn test_to_syscall_filter_success() {
     let dto = SyscallFilterDto::from_json(base_dto_json().to_string()).unwrap();
     let filter = dto.to_syscall_filter().unwrap();
-    assert!(filter.syscall.contains(&(native::SYS_openat as i64)));
-    assert!(filter.syscall.contains(&(native::SYS_read as i64)));
-    assert!(filter.args.get(&0).unwrap().contains(&1));
-    assert!(filter.args.get(&0).unwrap().contains(&2));
-    assert!(filter.args.get(&1).unwrap().contains(&3));
-    assert!(filter.context_matcher.is_some());
-    assert!(filter.flag_matcher.is_some());
+    assert!(filter.matcher.syscall.contains(&(native::SYS_openat as i64)));
+    assert!(filter.matcher.syscall.contains(&(native::SYS_read as i64)));
+    assert!(filter.matcher.args.get(&0).unwrap().contains(&1));
+    assert!(filter.matcher.args.get(&0).unwrap().contains(&2));
+    assert!(filter.matcher.args.get(&1).unwrap().contains(&3));
+    assert!(filter.matcher.context_matcher.is_some());
+    assert!(filter.matcher.flag_matcher.is_some());
     assert_eq!(filter.outcome.tag, Some("test_tag".to_string()));
     assert!(filter.outcome.log);
 }
@@ -99,8 +99,8 @@ fn test_to_syscall_filter_empty_paths_and_flags() {
     json["matcher"]["flags"] = json!([]);
     let dto = SyscallFilterDto::from_json(json.to_string()).unwrap();
     let filter = dto.to_syscall_filter().unwrap();
-    assert!(filter.context_matcher.is_none());
-    assert!(filter.flag_matcher.is_none());
+    assert!(filter.matcher.context_matcher.is_none());
+    assert!(filter.matcher.flag_matcher.is_none());
 }
 
 #[test]
@@ -134,12 +134,12 @@ fn test_to_syscall_filter_invalid_syscall_name() {
     json["matcher"]["syscall_names"] = vec![json!("openat15")].into();
     let dto = SyscallFilterDto::from_json(json.to_string()).unwrap();
     let filter = dto.to_syscall_filter().unwrap();
-    assert!(filter.syscall.is_empty());
-    assert!(filter.args.get(&0).unwrap().contains(&1));
-    assert!(filter.args.get(&0).unwrap().contains(&2));
-    assert!(filter.args.get(&1).unwrap().contains(&3));
-    assert!(filter.context_matcher.is_some());
-    assert!(filter.flag_matcher.is_some());
+    assert!(filter.matcher.syscall.is_empty());
+    assert!(filter.matcher.args.get(&0).unwrap().contains(&1));
+    assert!(filter.matcher.args.get(&0).unwrap().contains(&2));
+    assert!(filter.matcher.args.get(&1).unwrap().contains(&3));
+    assert!(filter.matcher.context_matcher.is_some());
+    assert!(filter.matcher.flag_matcher.is_some());
     assert_eq!(filter.outcome.tag, Some("test_tag".to_string()));
     assert!(filter.outcome.log);
 }

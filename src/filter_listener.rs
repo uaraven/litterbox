@@ -56,7 +56,7 @@ impl FilteringLogger {
         let mut filter_map: HashMap<u64, Vec<SyscallFilter>> = HashMap::new();
         let mut defaults: Vec<SyscallFilter> = Vec::new();
         for filter in filters {
-            if filter.syscall.is_empty() {
+            if filter.matcher.syscall.is_empty() {
                 defaults.push(filter);
                 continue;
             } else {
@@ -84,7 +84,7 @@ impl FilteringLogger {
         event: &SyscallEvent,
         filter: &SyscallFilter,
     ) -> Option<SyscallEvent> {
-        if filter.matches(proc, &event) {
+        if filter.matcher.matches(proc, &event) {
             // if the filter matches, we review the outcome to figure out what to do
             let mut event = event.clone();
             if filter.outcome.tag.is_some() {

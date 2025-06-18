@@ -5,6 +5,7 @@ use crate::{
     filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter},
     loggers::syscall_logger::SyscallLogger,
 };
+use crate::filters::syscall_filter::SyscallMatcher;
 
 // This function returns a permissive filtering logger.
 // It allows all syscalls and logs them.
@@ -14,10 +15,12 @@ pub(crate) fn permissive_filters(logger: Box<dyn SyscallLogger>) -> FilteringLog
         trigger_event: None,
         filters: Default::default(),
         default_filters: vec![SyscallFilter {
-            syscall: HashSet::new(),
-            args: Default::default(),
-            context_matcher: None,
-            flag_matcher: None,
+            matcher: SyscallMatcher {
+                syscall: HashSet::new(),
+                args: Default::default(),
+                context_matcher: None,
+                flag_matcher: None,
+            },
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
                 log: true,

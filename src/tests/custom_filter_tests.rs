@@ -19,18 +19,21 @@ use crate::{
     syscall_event::{SyscallEvent, SyscallEventListener},
     trace_process::TraceProcess,
 };
+use crate::filters::syscall_filter::SyscallMatcher;
 
 #[test]
 fn test_block_open_in_forbidden_folder() {
     let block_open = SyscallFilter {
-        syscall: [native::SYS_write as i64].into(),
-        args: Default::default(),
-        context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
-            vec!["/forbidden_folder".to_string()],
-            StrMatchOp::Prefix,
-            false,
-        ))),
-        flag_matcher: None,
+        matcher: SyscallMatcher {
+            syscall: [native::SYS_write as i64].into(),
+            args: Default::default(),
+            context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                vec!["/forbidden_folder".to_string()],
+                StrMatchOp::Prefix,
+                false,
+            ))),
+            flag_matcher: None,
+        },
         outcome: FilterOutcome {
             action: crate::filters::syscall_filter::FilterAction::Block(libc::ENOSYS),
             log: true,
@@ -77,14 +80,16 @@ fn test_block_open_in_forbidden_folder() {
 #[test]
 fn test_dont_block_open_in_non_forbidden_folder() {
     let block_open = SyscallFilter {
-        syscall: [native::SYS_write as i64].into(),
-        args: Default::default(),
-        context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
-            vec!["/forbidden_folder".to_string()],
-            StrMatchOp::Prefix,
-            false,
-        ))),
-        flag_matcher: None,
+        matcher: SyscallMatcher {
+            syscall: [native::SYS_write as i64].into(),
+            args: Default::default(),
+            context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                vec!["/forbidden_folder".to_string()],
+                StrMatchOp::Prefix,
+                false,
+            ))),
+            flag_matcher: None,
+        },
         outcome: FilterOutcome {
             action: crate::filters::syscall_filter::FilterAction::Block(libc::ENOSYS),
             log: true,
@@ -130,14 +135,16 @@ fn test_dont_block_open_in_non_forbidden_folder() {
 #[test]
 fn test_dont_block_open_in_forbidden_folder_when_created_by_this_process() {
     let block_open = SyscallFilter {
-        syscall: [native::SYS_write as i64].into(),
-        args: Default::default(),
-        context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
-            vec!["/forbidden_folder".to_string()],
-            StrMatchOp::Prefix,
-            true,
-        ))),
-        flag_matcher: None,
+        matcher: SyscallMatcher {
+            syscall: [native::SYS_write as i64].into(),
+            args: Default::default(),
+            context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                vec!["/forbidden_folder".to_string()],
+                StrMatchOp::Prefix,
+                true,
+            ))),
+            flag_matcher: None,
+        },
         outcome: FilterOutcome {
             action: crate::filters::syscall_filter::FilterAction::Block(libc::ENOSYS),
             log: true,

@@ -7,6 +7,7 @@ use crate::{
     filter_listener::SyscallFilterTrigger,
     filters::{
         address_matcher::AddressMatcher, context_matcher::ContextMatcher, matcher::StrMatchOp,
+        syscall_filter::SyscallMatcher as FilterSyscallMatcher,
     },
     loggers::syscall_logger::SyscallLogger,
 };
@@ -177,33 +178,35 @@ impl SyscallFilterDto {
         let outcome_action = self.parse_outcome_action()?;
 
         Ok(SyscallFilter {
-            syscall: syscall_ids,
-            args: arg_map,
-            context_matcher: if let Some(path_matcher) = &self.matcher.paths {
-                let path_match_op = parse_compare_op(path_matcher.compare_op.as_str())?;
-                Some(ContextMatcher::PathMatcher(PathMatcher::new(
-                    path_matcher.paths.clone(),
-                    path_match_op,
-                    path_matcher.match_created_by_process,
-                )))
-            } else if let Some(address_matcher) = &self.matcher.addresses {
-                let addr_match_op = parse_compare_op(address_matcher.compare_op.as_str())?;
-                Some(ContextMatcher::AddressMatcher(AddressMatcher::new(
-                    address_matcher
-                        .addresses
-                        .iter()
-                        .map(|s| s.as_str())
-                        .collect(),
-                    addr_match_op,
-                    address_matcher.port,
-                )))
-            } else {
-                None
-            },
-            flag_matcher: if !self.matcher.flags.is_empty() {
-                Some(FlagMatcher::new(self.matcher.flags.clone()))
-            } else {
-                None
+            matcher: FilterSyscallMatcher {
+                syscall: syscall_ids,
+                args: arg_map,
+                context_matcher: if let Some(path_matcher) = &self.matcher.paths {
+                    let path_match_op = parse_compare_op(path_matcher.compare_op.as_str())?;
+                    Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                        path_matcher.paths.clone(),
+                        path_match_op,
+                        path_matcher.match_created_by_process,
+                    )))
+                } else if let Some(address_matcher) = &self.matcher.addresses {
+                    let addr_match_op = parse_compare_op(address_matcher.compare_op.as_str())?;
+                    Some(ContextMatcher::AddressMatcher(AddressMatcher::new(
+                        address_matcher
+                            .addresses
+                            .iter()
+                            .map(|s| s.as_str())
+                            .collect(),
+                        addr_match_op,
+                        address_matcher.port,
+                    )))
+                } else {
+                    None
+                },
+                flag_matcher: if !self.matcher.flags.is_empty() {
+                    Some(FlagMatcher::new(self.matcher.flags.clone()))
+                } else {
+                    None
+                },
             },
             outcome: FilterOutcome {
                 action: outcome_action,
