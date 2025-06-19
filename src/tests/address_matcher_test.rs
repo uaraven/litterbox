@@ -5,7 +5,11 @@ use crate::filters::{
 
 #[test]
 fn address_matcher_test() {
-    let matcher = AddressMatcher::new(vec!["192.168", "172.10"], StrMatchOp::Prefix, Some(8080));
+    let matcher = AddressMatcher::new(
+        vec!["192.168".to_string(), "172.10".to_string()],
+        StrMatchOp::Prefix,
+        Some(8080),
+    );
 
     assert_eq!(matcher.matches(&"192.168.11.0:8080".to_string()), true);
     assert_eq!(matcher.matches(&"192.168.11.0:80".to_string()), false);
@@ -18,7 +22,11 @@ fn address_matcher_test() {
 
 #[test]
 fn address_matcher_port_test() {
-    let matcher = AddressMatcher::new(vec!["192.168", "172.10"], StrMatchOp::Prefix, None);
+    let matcher = AddressMatcher::new(
+        vec!["192.168".to_string(), "172.10".to_string()],
+        StrMatchOp::Prefix,
+        None,
+    );
 
     assert_eq!(matcher.matches(&"192.168.11.0:8080".to_string()), true);
     assert_eq!(matcher.matches(&"192.168.11.0:80".to_string()), true);

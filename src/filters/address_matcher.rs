@@ -10,9 +10,9 @@ pub(crate) struct AddressMatcher {
 }
 
 impl AddressMatcher {
-    pub fn new(addresses: Vec<&str>, match_op: StrMatchOp, port: Option<u16>) -> Self {
+    pub fn new(addresses: Vec<String>, match_op: StrMatchOp, port: Option<u16>) -> Self {
         Self {
-            addresses: addresses.iter().map(|s| s.to_string()).collect(),
+            addresses: addresses,
             match_op,
             port,
         }

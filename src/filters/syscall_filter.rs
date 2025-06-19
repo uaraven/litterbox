@@ -37,8 +37,8 @@ pub(crate) struct FilterOutcome {
     pub log: bool,
 }
 
-impl FilterOutcome {
-    pub fn default() -> Self {
+impl Default for FilterOutcome {
+    fn default() -> Self {
         FilterOutcome {
             action: FilterAction::Block(-libc::ENOSYS),
             tag: None,
@@ -48,7 +48,7 @@ impl FilterOutcome {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct SyscallMatcher{
+pub(crate) struct SyscallMatcher {
     pub syscall: HashSet<i64>,
     pub args: HashMap<u8, HashSet<u64>>,
     pub context_matcher: Option<ContextMatcher>,
@@ -139,7 +139,7 @@ impl SyscallFilter {
 
     pub fn allow(syscall: &[i64], path: &Vec<String>) -> Self {
         Self {
-            matcher: SyscallMatcher{
+            matcher: SyscallMatcher {
                 syscall: syscall.iter().cloned().collect(),
                 args: HashMap::new(),
                 context_matcher: if path.is_empty() {
@@ -257,5 +257,4 @@ impl SyscallFilter {
             },
         }
     }
-
 }

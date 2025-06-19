@@ -2,6 +2,12 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Deserialize;
 
+use super::{
+    flag_matcher::FlagMatcher,
+    path_matcher::PathMatcher,
+    syscall_filter::{FilterAction, FilterOutcome, SyscallFilter},
+    utils::syscall_id_by_name,
+};
 use crate::{
     FilteringLogger,
     filters::{
@@ -9,12 +15,6 @@ use crate::{
         syscall_filter::SyscallMatcher,
     },
     loggers::syscall_logger::SyscallLogger,
-};
-use super::{
-    flag_matcher::FlagMatcher,
-    path_matcher::PathMatcher,
-    syscall_filter::{FilterAction, FilterOutcome, SyscallFilter},
-    utils::syscall_id_by_name,
 };
 
 #[derive(Debug)]
@@ -69,30 +69,28 @@ impl SyscallMatcherDto {
             .map(|(k, v)| (*k, v.iter().cloned().collect()))
             .collect();
 
+        let context_matcher = if let Some(path_matcher) = &self.paths {
+            let path_match_op = parse_compare_op(path_matcher.compare_op.as_str())?;
+            Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                path_matcher.paths.clone(),
+                path_match_op,
+                path_matcher.match_created_by_process,
+            )))
+        } else if let Some(address_matcher) = &self.addresses {
+            let addr_match_op = parse_compare_op(address_matcher.compare_op.as_str())?;
+            Some(ContextMatcher::AddressMatcher(AddressMatcher::new(
+                address_matcher.addresses.clone(),
+                addr_match_op,
+                address_matcher.port,
+            )))
+        } else {
+            None
+        };
+
         let matcher = SyscallMatcher {
             syscall: syscall_ids,
             args: arg_map,
-            context_matcher: if let Some(path_matcher) = &self.paths {
-                let path_match_op = parse_compare_op(path_matcher.compare_op.as_str())?;
-                Some(ContextMatcher::PathMatcher(PathMatcher::new(
-                    path_matcher.paths.clone(),
-                    path_match_op,
-                    path_matcher.match_created_by_process,
-                )))
-            } else if let Some(address_matcher) = &self.addresses {
-                let addr_match_op = parse_compare_op(address_matcher.compare_op.as_str())?;
-                Some(ContextMatcher::AddressMatcher(AddressMatcher::new(
-                    address_matcher
-                        .addresses
-                        .iter()
-                        .map(|s| s.as_str())
-                        .collect(),
-                    addr_match_op,
-                    address_matcher.port,
-                )))
-            } else {
-                None
-            },
+            context_matcher: context_matcher,
             flag_matcher: if !self.flags.is_empty() {
                 Some(FlagMatcher::new(self.flags.clone()))
             } else {
@@ -149,11 +147,15 @@ pub(crate) fn load_syscall_filter(
         .iter()
         .filter_map(|f| f.to_syscall_filter().ok())
         .collect::<Vec<_>>();
-    Ok(FilteringLogger::new(
-        filters,
-        config.trigger.map(|t| t.to_syscall_matcher().unwrap()), // TODO: Maybe handle the error?
-        logger,
-    ))
+    let trigger = match config.trigger {
+        Some(trigger) => {
+            let matcher = trigger.to_syscall_matcher()?;
+            Some(matcher)
+        }
+        None => None,
+    };
+
+    Ok(FilteringLogger::new(filters, trigger, logger))
 }
 
 pub(crate) fn parse_compare_op(compare_op: &str) -> Result<StrMatchOp, ParsingError> {
@@ -195,7 +197,7 @@ impl SyscallFilterDto {
         let outcome_action = self.parse_outcome_action()?;
 
         Ok(SyscallFilter {
-            matcher: self.matcher.to_syscall_matcher().unwrap(),
+            matcher: self.matcher.to_syscall_matcher()?,
             outcome: FilterOutcome {
                 action: outcome_action,
                 tag: if self.outcome.tag.is_empty() {
