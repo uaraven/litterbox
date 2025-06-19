@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::filters::syscall_filter::SyscallMatcher;
 use crate::{
     TextLogger,
     filters::{
@@ -8,31 +9,9 @@ use crate::{
     },
     loggers::syscall_logger::SyscallLogger,
     preconfigured::default::default_filters,
-    syscall_common::EXTRA_PATHNAME,
     syscall_event::{SyscallEvent, SyscallEventListener},
     trace_process::TraceProcess,
 };
-use crate::filters::syscall_filter::SyscallMatcher;
-
-/// This struct describes a syscall that primes the filter. Any syscall before the trigger syscall
-/// will be ignored. After the trigger syscall, the filters will be applied to all syscalls.
-pub(crate) struct SyscallFilterTrigger {
-    pub syscall_id: i64,
-    pub file_path: Option<String>,
-}
-
-impl SyscallFilterTrigger {
-    pub fn matches(&self, syscall: &SyscallEvent) -> bool {
-        if syscall.id as i64 == self.syscall_id {
-            if let Some(ref path) = self.file_path {
-                if let Some(extra_path) = syscall.extra_context.get(EXTRA_PATHNAME) {
-                    return extra_path == path;
-                }
-            }
-        }
-        return false;
-    }
-}
 
 pub(crate) struct FilteringLogger {
     pub primed: bool,
@@ -42,8 +21,8 @@ pub(crate) struct FilteringLogger {
     pub logger: Option<Box<dyn SyscallLogger>>,
 }
 
-impl FilteringLogger {
-    pub fn default() -> Self {
+impl Default for FilteringLogger {
+    fn default() -> Self {
         default_filters(Box::new(TextLogger {}))
     }
 }

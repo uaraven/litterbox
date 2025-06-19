@@ -4,10 +4,10 @@ use std::{
     vec,
 };
 
+use crate::filters::syscall_filter::SyscallMatcher;
 #[cfg(test)]
 use crate::{
     FilteringLogger,
-    filter_listener::SyscallFilterTrigger,
     filters::{
         context_matcher::ContextMatcher,
         flag_matcher::FlagMatcher,
@@ -24,7 +24,6 @@ use crate::{
 use nix::{libc::user_regs_struct, unistd::Pid};
 #[cfg(test)]
 use syscall_numbers::native;
-use crate::filters::syscall_filter::SyscallMatcher;
 
 #[cfg(test)]
 fn fake_syscall_id(_pid: Pid, _regs: user_regs_struct, _new_id: u64) -> Result<(), nix::Error> {
@@ -71,9 +70,9 @@ fn test_trigger_event_blocks_until_primed() {
         context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
             vec!["/tmp/trigger".to_string()],
             StrMatchOp::Exact,
-            false
+            false,
         ))),
-        flag_matcher: None
+        flag_matcher: None,
     };
     let mut logger = FilteringLogger::new(vec![], Some(trigger), None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
@@ -242,7 +241,7 @@ fn test_handle_filter_matching_by_path_prefix() {
             log: false,
             tag: Some("blocked".to_string()),
         },
-        };
+    };
     let mut logger = FilteringLogger::new(vec![filter], None, None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
     let mut extra_context: HashMap<&'static str, String> = HashMap::new();
