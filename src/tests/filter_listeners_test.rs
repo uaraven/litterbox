@@ -4,10 +4,10 @@ use std::{
     vec,
 };
 
+use crate::filters::syscall_filter::SyscallMatcher;
 #[cfg(test)]
 use crate::{
     FilteringLogger,
-    filter_listener::SyscallFilterTrigger,
     filters::{
         context_matcher::ContextMatcher,
         flag_matcher::FlagMatcher,
@@ -64,9 +64,15 @@ fn test_default_filtering_logger_primed() {
 
 #[test]
 fn test_trigger_event_blocks_until_primed() {
-    let trigger = SyscallFilterTrigger {
-        syscall_id: 42,
-        file_path: Some("/tmp/trigger".to_string()),
+    let trigger = SyscallMatcher {
+        syscall: HashSet::from([42]),
+        args: HashMap::default(),
+        context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
+            vec!["/tmp/trigger".to_string()],
+            StrMatchOp::Exact,
+            false,
+        ))),
+        flag_matcher: None,
     };
     let mut logger = FilteringLogger::new(vec![], Some(trigger), None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
@@ -98,10 +104,12 @@ fn test_trigger_event_blocks_until_primed() {
 #[test]
 fn test_filtering_logger_with_custom_filter() {
     let filter = SyscallFilter {
-        syscall: [123].into(),
-        args: Default::default(),
-        context_matcher: None,
-        flag_matcher: None,
+        matcher: SyscallMatcher {
+            syscall: [123].into(),
+            args: Default::default(),
+            context_matcher: None,
+            flag_matcher: None,
+        },
         outcome: FilterOutcome {
             action: FilterAction::Block(1),
             log: false,
@@ -119,15 +127,17 @@ fn test_filtering_logger_with_custom_filter() {
 #[test]
 fn test_filtering_logger_default_syscall_id_filters() {
     let filter = SyscallFilter {
-        syscall: HashSet::new(),
+        matcher: SyscallMatcher {
+            syscall: HashSet::new(),
+            args: Default::default(),
+            context_matcher: None,
+            flag_matcher: None,
+        },
         outcome: FilterOutcome {
             action: FilterAction::Allow,
             log: true,
             tag: Some("allowed".to_string()),
         },
-        args: Default::default(),
-        context_matcher: None,
-        flag_matcher: None,
     };
     let mut logger = FilteringLogger::new(vec![filter], None, None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
@@ -140,15 +150,17 @@ fn test_filtering_logger_default_syscall_id_filters() {
 #[test]
 fn test_handle_filter_non_matching() {
     let filter = SyscallFilter {
-        syscall: [123].into(),
+        matcher: SyscallMatcher {
+            syscall: [123].into(),
+            args: Default::default(),
+            context_matcher: None,
+            flag_matcher: None,
+        },
         outcome: FilterOutcome {
             action: FilterAction::Block(1),
             log: false,
             tag: None,
         },
-        args: Default::default(),
-        context_matcher: None,
-        flag_matcher: None,
     };
     let mut logger = FilteringLogger::new(vec![filter], None, None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
@@ -160,15 +172,17 @@ fn test_handle_filter_non_matching() {
 #[test]
 fn test_handle_filter_matching_by_flag() {
     let filter = SyscallFilter {
-        syscall: [native::SYS_openat].into(),
+        matcher: SyscallMatcher {
+            syscall: [native::SYS_openat].into(),
+            args: Default::default(),
+            context_matcher: None,
+            flag_matcher: Some(FlagMatcher::new(vec!["O_CREAT".to_string()])),
+        },
         outcome: FilterOutcome {
             action: FilterAction::Block(1),
             log: false,
             tag: Some("blocked".to_string()),
         },
-        args: Default::default(),
-        context_matcher: None,
-        flag_matcher: Some(FlagMatcher::new(vec!["O_CREAT".to_string()])),
     };
     let mut logger = FilteringLogger::new(vec![filter], None, None);
     let proc = TraceProcess::new(Pid::from_raw(1000));
@@ -212,19 +226,21 @@ fn test_handle_filter_matching_by_flag() {
 #[test]
 fn test_handle_filter_matching_by_path_prefix() {
     let filter = SyscallFilter {
-        syscall: [native::SYS_openat].into(),
+        matcher: SyscallMatcher {
+            syscall: [native::SYS_openat].into(),
+            args: Default::default(),
+            context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                vec!["/tmp/".to_string()],
+                StrMatchOp::Prefix,
+                false,
+            ))),
+            flag_matcher: None,
+        },
         outcome: FilterOutcome {
             action: FilterAction::Block(1),
             log: false,
             tag: Some("blocked".to_string()),
         },
-        args: Default::default(),
-        context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
-            vec!["/tmp/".to_string()],
-            StrMatchOp::Prefix,
-            false,
-        ))),
-        flag_matcher: None,
     };
     let mut logger = FilteringLogger::new(vec![filter], None, None);
     let proc = TraceProcess::new(Pid::from_raw(1000));

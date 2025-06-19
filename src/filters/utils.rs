@@ -14,7 +14,7 @@ pub(crate) fn group_filters_by_syscall(
         filtered_syscalls
             .into_iter()
             .fold(HashMap::new(), |mut acc, filter| {
-                for syscall in filter.syscall.iter() {
+                for syscall in filter.matcher.syscall.iter() {
                     acc.entry(*syscall as u64)
                         .or_insert_with(Vec::new)
                         .push(filter.clone());

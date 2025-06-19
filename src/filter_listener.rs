@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::filters::syscall_filter::SyscallMatcher;
 use crate::{
     TextLogger,
     filters::{
@@ -8,41 +9,20 @@ use crate::{
     },
     loggers::syscall_logger::SyscallLogger,
     preconfigured::default::default_filters,
-    syscall_common::EXTRA_PATHNAME,
     syscall_event::{SyscallEvent, SyscallEventListener},
     trace_process::TraceProcess,
 };
 
-/// This struct describes a syscall that primes the filter. Any syscall before the trigger syscall
-/// will be ignored. After the trigger syscall, the filters will be applied to all syscalls.
-pub(crate) struct SyscallFilterTrigger {
-    pub syscall_id: i64,
-    pub file_path: Option<String>,
-}
-
-impl SyscallFilterTrigger {
-    pub fn matches(&self, syscall: &SyscallEvent) -> bool {
-        if syscall.id as i64 == self.syscall_id {
-            if let Some(ref path) = self.file_path {
-                if let Some(extra_path) = syscall.extra_context.get(EXTRA_PATHNAME) {
-                    return extra_path == path;
-                }
-            }
-        }
-        return false;
-    }
-}
-
 pub(crate) struct FilteringLogger {
     pub primed: bool,
-    pub trigger_event: Option<SyscallFilterTrigger>,
+    pub trigger_event: Option<SyscallMatcher>,
     pub filters: HashMap<u64, Vec<SyscallFilter>>,
     pub default_filters: Vec<SyscallFilter>,
     pub logger: Option<Box<dyn SyscallLogger>>,
 }
 
-impl FilteringLogger {
-    pub fn default() -> Self {
+impl Default for FilteringLogger {
+    fn default() -> Self {
         default_filters(Box::new(TextLogger {}))
     }
 }
@@ -50,13 +30,13 @@ impl FilteringLogger {
 impl FilteringLogger {
     pub fn new(
         filters: Vec<SyscallFilter>,
-        trigger_event: Option<SyscallFilterTrigger>,
+        trigger_event: Option<SyscallMatcher>,
         logger: Option<Box<dyn SyscallLogger>>,
     ) -> Self {
         let mut filter_map: HashMap<u64, Vec<SyscallFilter>> = HashMap::new();
         let mut defaults: Vec<SyscallFilter> = Vec::new();
         for filter in filters {
-            if filter.syscall.is_empty() {
+            if filter.matcher.syscall.is_empty() {
                 defaults.push(filter);
                 continue;
             } else {
@@ -84,7 +64,7 @@ impl FilteringLogger {
         event: &SyscallEvent,
         filter: &SyscallFilter,
     ) -> Option<SyscallEvent> {
-        if filter.matches(proc, &event) {
+        if filter.matcher.matches(proc, &event) {
             // if the filter matches, we review the outcome to figure out what to do
             let mut event = event.clone();
             if filter.outcome.tag.is_some() {
@@ -108,7 +88,7 @@ impl SyscallEventListener for FilteringLogger {
     fn process_event(&mut self, proc: &TraceProcess, event: &SyscallEvent) -> Option<SyscallEvent> {
         if !self.primed {
             if let Some(ref trigger) = self.trigger_event {
-                if trigger.matches(event) {
+                if trigger.matches(proc, event) {
                     self.primed = true;
                 } else {
                     return Some(event.clone());

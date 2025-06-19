@@ -1,6 +1,6 @@
 use syscall_numbers::native;
 
-use crate::filters::syscall_filter::FilterAction;
+use crate::filters::syscall_filter::{FilterAction, SyscallMatcher};
 use crate::filters::utils::group_filters_by_syscall;
 use crate::loggers::syscall_logger::SyscallLogger;
 use crate::{
@@ -60,10 +60,12 @@ pub(crate) fn restrictive_filters(logger: Box<dyn SyscallLogger>) -> FilteringLo
         trigger_event: None,
         filters: filter_map,
         default_filters: vec![SyscallFilter {
-            syscall: HashSet::new(),
-            args: Default::default(),
-            context_matcher: None,
-            flag_matcher: None,
+            matcher: SyscallMatcher {
+                syscall: HashSet::new(),
+                args: Default::default(),
+                context_matcher: None,
+                flag_matcher: None,
+            },
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
                 log: true,
@@ -132,10 +134,12 @@ pub(crate) fn restrictive_filters(logger: Box<dyn SyscallLogger>) -> FilteringLo
         trigger_event: None,
         filters: filter_map,
         default_filters: vec![SyscallFilter {
-            syscall: HashSet::new(),
-            args: Default::default(),
-            path_matcher: None,
-            flag_matcher: None,
+            matcher: SyscallMatcher {
+                syscall: HashSet::new(),
+                args: Default::default(),
+                context_matcher: None,
+                flag_matcher: None,
+            },
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
                 log: true,

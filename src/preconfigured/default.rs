@@ -8,6 +8,7 @@ use crate::{
 };
 use std::collections::HashSet;
 
+use crate::filters::syscall_filter::SyscallMatcher;
 use crate::filters::{syscall_filter::FilterAction, utils::group_filters_by_syscall};
 
 fn get_allowed_paths() -> Vec<String> {
@@ -95,10 +96,12 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
         trigger_event: None,
         filters: filter_map,
         default_filters: vec![SyscallFilter {
-            syscall: HashSet::new(),
-            args: Default::default(),
-            context_matcher: None,
-            flag_matcher: None,
+            matcher: SyscallMatcher {
+                syscall: HashSet::new(),
+                args: Default::default(),
+                context_matcher: None,
+                flag_matcher: None,
+            },
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
                 log: true,
@@ -125,7 +128,7 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
             native::SYS_openat,
             true,
             &allowed_path_list,
-            PathMatchOp::Prefix,
+            StrMatchOp::Prefix,
             &vec![String::from("O_CREAT")],
         ),
         SyscallFilter::with_paths(
@@ -148,7 +151,7 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
             ],
             true,
             &allowed_path_list,
-            PathMatchOp::Prefix,
+            StrMatchOp::Prefix,
         ),
         SyscallFilter::allow(
             &[
@@ -212,10 +215,12 @@ pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger
         trigger_event: None,
         filters: filter_map,
         default_filters: vec![SyscallFilter {
-            syscall: HashSet::new(),
-            args: Default::default(),
-            path_matcher: None,
-            flag_matcher: None,
+            matcher: SyscallMatcher {
+                syscall: HashSet::new(),
+                args: Default::default(),
+                context_matcher: None,
+                flag_matcher: None,
+            },
             outcome: FilterOutcome {
                 action: FilterAction::Allow,
                 log: false,
