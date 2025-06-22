@@ -1,6 +1,8 @@
 use crate::regs::Regs;
 use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::{EXTRA_CWD, EXTRA_DIRFD, EXTRA_PATHNAME, get_syscall_name};
+use crate::syscall_common::{
+    EXTRA_ADDR, EXTRA_CWD, EXTRA_DIRFD, EXTRA_FLAGS, EXTRA_PATHNAME, get_syscall_name,
+};
 use crate::syscall_parser::syscall_parser;
 use crate::trace_process::{SetSyscallId, TraceProcess, set_syscall_id};
 use nix::libc::{self, user_regs_struct};
@@ -171,6 +173,17 @@ impl SyscallEvent {
     /// it'll use the dirfd to resolve the absolute path of the file.
     pub fn get_abs_filepath(&self) -> Option<String> {
         get_abs_filepath_from_extra(&self.extra_context)
+    }
+
+    pub fn get_extras_pathname(&self) -> Option<&String> {
+        self.extra_context.get(EXTRA_PATHNAME)
+    }
+    pub fn get_extras_addr(&self) -> Option<&String> {
+        self.extra_context.get(EXTRA_ADDR)
+    }
+
+    pub fn get_extras_flags(&self) -> Option<&String> {
+        self.extra_context.get(EXTRA_FLAGS)
     }
 }
 

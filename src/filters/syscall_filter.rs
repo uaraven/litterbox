@@ -70,7 +70,7 @@ impl SyscallMatcher {
         }
 
         if let Some(ContextMatcher::PathMatcher(ref path_matcher)) = self.context_matcher {
-            if let Some(syscall_path) = syscall.extra_context.get(EXTRA_PATHNAME) {
+            if let Some(syscall_path) = syscall.get_extras_pathname() {
                 if !path_matcher.matches(syscall_path) {
                     return false;
                 } else if path_matcher.only_created_by_process
@@ -82,7 +82,7 @@ impl SyscallMatcher {
         }
 
         if let Some(ContextMatcher::AddressMatcher(ref address_matcher)) = self.context_matcher {
-            if let Some(syscall_addr) = syscall.extra_context.get(EXTRA_ADDR) {
+            if let Some(syscall_addr) = syscall.get_extras_addr() {
                 if !address_matcher.matches(syscall_addr) {
                     return false;
                 }
@@ -90,7 +90,7 @@ impl SyscallMatcher {
         }
 
         if let Some(ref flag_matcher) = self.flag_matcher {
-            if let Some(flags) = syscall.extra_context.get(EXTRA_FLAGS) {
+            if let Some(flags) = syscall.get_extras_flags() {
                 if !flag_matcher.matches(flags) {
                     return false;
                 }
