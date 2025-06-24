@@ -1,3 +1,20 @@
+/*
+ * Litterbox - A sandboxing and tracing tool
+ *
+ * Copyright (c) 2025  Oles Voronin
+ *
+ * This program is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this
+ * program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
 #[cfg(test)]
 use crate::filters::{
     dto::SyscallFilterDto, dto::parse_compare_op, matcher::StrMatchOp, syscall_filter::FilterAction,
@@ -81,7 +98,12 @@ fn test_parse_outcome_action_invalid() {
 fn test_to_syscall_filter_success() {
     let dto = SyscallFilterDto::from_json(base_dto_json().to_string()).unwrap();
     let filter = dto.to_syscall_filter().unwrap();
-    assert!(filter.matcher.syscall.contains(&(native::SYS_openat as i64)));
+    assert!(
+        filter
+            .matcher
+            .syscall
+            .contains(&(native::SYS_openat as i64))
+    );
     assert!(filter.matcher.syscall.contains(&(native::SYS_read as i64)));
     assert!(filter.matcher.args.get(&0).unwrap().contains(&1));
     assert!(filter.matcher.args.get(&0).unwrap().contains(&2));
