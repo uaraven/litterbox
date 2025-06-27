@@ -19,27 +19,31 @@ use std::fmt::Display;
 
 use crate::{
     FilteringLogger, TextLogger,
-    cli_args::{self, Cli},
+    cli_args::{self, Args},
     filters::dto::{self},
     loggers::{jsonl_logger::JsonlLogger, syscall_logger::SyscallLogger},
     preconfigured::{default, permissive, restrictive},
 };
 
-pub struct Error {
+pub struct FilterError {
     pub msg: String,
 }
 
-impl Display for Error {
+impl Display for FilterError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.msg)
     }
 }
 
-pub fn filters_from_args(cli: Cli) -> Result<FilteringLogger, Error> {
+pub fn filters_from_args(cli: Args) -> Result<FilteringLogger, FilterError> {
+    if cli.sandbox && cli.filter {
+        return Err(FilterError {
+            msg: "Cannot specify both --sandbox and --filter".to_string(),
+        });
+    }
     let logger: Box<dyn SyscallLogger> = match cli.log_format {
-        Some(cli_args::LogFormat::Text) => Box::new(TextLogger::default()),
-        Some(cli_args::LogFormat::Jsonl) => Box::new(JsonlLogger::default()),
-        _ => Box::new(TextLogger::default()),
+        cli_args::LogFormat::Text => Box::new(TextLogger::default()),
+        cli_args::LogFormat::Jsonl => Box::new(JsonlLogger::default()),
     };
     match cli.filter_config {
         Some(filter_config_path) => {

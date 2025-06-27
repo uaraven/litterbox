@@ -24,6 +24,7 @@ mod flags;
 mod loggers;
 mod preconfigured;
 mod regs;
+mod sandbox;
 mod strace;
 mod syscall_args;
 mod syscall_common;
@@ -32,12 +33,11 @@ mod syscall_parser;
 mod syscall_parsers_file;
 mod syscall_parsers_process;
 mod syscall_parsers_socket;
+mod tests;
 mod trace_process;
 
-mod tests;
-
 use clap::Parser;
-use cli_args::Cli;
+use cli_args::Args;
 use filter_listener::FilteringLogger;
 use loggers::text_logger::TextLogger;
 use nix::sys::ptrace;
@@ -46,9 +46,9 @@ use nix::unistd::{ForkResult, fork};
 use crate::filter_loader::filters_from_args;
 
 fn main() {
-    let cli = Cli::parse();
+    let cli = Args::parse();
 
-    let program = match cli.prog.iter().next() {
+    let program = match cli.program.iter().next() {
         Some(p) => p,
         None => {
             eprintln!("Usage: litterbox [options...] <program> [args...]");
@@ -59,7 +59,7 @@ fn main() {
     // The rest are arguments to pass to that program
     // let program_args: Vec<String> = args.collect();
     let program_args = cli
-        .prog
+        .program
         .iter()
         .skip(1)
         .map(|s| s.to_string())
