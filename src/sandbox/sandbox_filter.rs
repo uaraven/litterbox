@@ -20,8 +20,9 @@ use std::collections::{HashMap, HashSet};
 use crate::filter_listener::FilteringLogger;
 use crate::filter_loader::FilterError;
 use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher};
-use crate::filters::utils::syscall_id_by_name;
 use crate::loggers::syscall_logger::SyscallLogger;
+use crate::sandbox::sandbox_read_filter::create_reader_filter;
+use crate::sandbox::sandbox_write_filter::create_write_filter;
 
 fn default_filter() -> SyscallFilter {
     SyscallFilter {
@@ -39,29 +40,6 @@ fn default_filter() -> SyscallFilter {
     }
 }
 
-fn reader_filter() -> SyscallFilter {
-    let read_syscalls = vec!["read", "pread", "readv", "open", "openat"];
-    let read_syscall_ids: HashSet<i64> = read_syscalls
-        .iter()
-        .map(|&s| syscall_id_by_name(s).unwrap())
-        .map(|id| id as i64)
-        .collect();
-
-    SyscallFilter {
-        matcher: SyscallMatcher {
-            syscall: read_syscall_ids,
-            args: HashMap::default(),
-            context_matcher: None,
-            flag_matcher: None,
-        },
-        outcome: FilterOutcome {
-            action: FilterAction::Allow,
-            tag: None,
-            log: true,
-        },
-    }
-}
-
 fn create_sandbox_filters(
     logger: Box<dyn SyscallLogger>,
     allow_write: Vec<&str>,
@@ -74,7 +52,9 @@ fn create_sandbox_filters(
     let mut connectable_addresses = vec!["127.0.0.1", "::1"];
     connectable_addresses.extend(allow_connect);
 
-    let filters = vec![reader_filter(), default_filter()];
+    let mut filters = create_write_filter();
+    filters.push(create_reader_filter());
+    filters.push(default_filter());
 
     Ok(FilteringLogger::new(filters, None, Some(logger)))
 }

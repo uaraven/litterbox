@@ -23,3 +23,18 @@
     - [ ] Block server sockets
   - [ ] Simple subprocess filtering
     - [ ] Block spawning processes by name
+
+
+
+ - Handle more syscalls:
+  - read
+    - openat
+    - name_to_handle_at
+    - open_by_handle_at
+  - write
+    - write
+    - writev
+    - pwrite
+    - pwrite64
+    - pwritev
+    - pwritev2
