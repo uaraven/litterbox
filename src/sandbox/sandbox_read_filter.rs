@@ -20,16 +20,12 @@ use std::collections::{HashMap, HashSet};
 
 use crate::filters::{
     syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher},
-    utils::syscall_id_by_name,
+    utils::syscall_ids_by_names,
 };
 
 pub(crate) fn create_reader_filter() -> SyscallFilter {
     let read_syscalls = vec!["read", "pread", "readv", "open", "openat"];
-    let read_syscall_ids: HashSet<i64> = read_syscalls
-        .iter()
-        .map(|&s| syscall_id_by_name(s).unwrap())
-        .map(|id| id as i64)
-        .collect();
+    let read_syscall_ids: HashSet<i64> = syscall_ids_by_names(read_syscalls);
 
     SyscallFilter {
         matcher: SyscallMatcher {
@@ -54,15 +50,16 @@ mod tests {
     #[test]
     fn test_reader_filter_includes_read_syscalls() {
         let filter = create_reader_filter();
-        
+
         // Test that all expected read syscalls are included
         let expected_syscalls = vec!["read", "pread", "readv", "open", "openat"];
-        
+
         for syscall_name in expected_syscalls {
             if let Some(syscall_id) = syscall_id_by_name(syscall_name) {
                 assert!(
                     filter.matcher.syscall.contains(&(syscall_id as i64)),
-                    "Filter should include syscall: {}", syscall_name
+                    "Filter should include syscall: {}",
+                    syscall_name
                 );
             }
         }
@@ -71,21 +68,24 @@ mod tests {
     #[test]
     fn test_reader_filter_outcome_allows_and_logs() {
         let filter = create_reader_filter();
-        
+
         // Test that the filter allows syscalls and logs them
         match filter.outcome.action {
-            FilterAction::Allow => {}, // Expected
+            FilterAction::Allow => {} // Expected
             _ => panic!("Reader filter should allow syscalls"),
         }
-        
+
         assert!(filter.outcome.log, "Reader filter should log syscalls");
-        assert_eq!(filter.outcome.tag, None, "Reader filter should not tag syscalls");
+        assert_eq!(
+            filter.outcome.tag, None,
+            "Reader filter should not tag syscalls"
+        );
     }
 
     #[test]
     fn test_reader_filter_has_no_context_matcher() {
         let filter = create_reader_filter();
-        
+
         // Test that the filter has no context matcher (no path/address filtering)
         assert!(filter.matcher.context_matcher.is_none());
     }
@@ -93,7 +93,7 @@ mod tests {
     #[test]
     fn test_reader_filter_has_no_flag_matcher() {
         let filter = create_reader_filter();
-        
+
         // Test that the filter has no flag matcher
         assert!(filter.matcher.flag_matcher.is_none());
     }
@@ -101,7 +101,7 @@ mod tests {
     #[test]
     fn test_reader_filter_has_no_args_matcher() {
         let filter = create_reader_filter();
-        
+
         // Test that the filter has no arguments matcher
         assert!(filter.matcher.args.is_empty());
     }
@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn test_reader_filter_syscall_count() {
         let filter = create_reader_filter();
-        
+
         // Test that the filter has the expected number of syscalls
         // Should have 5 syscalls (read, pread, readv, open, openat)
         // But only those that exist on the current architecture
@@ -118,7 +118,7 @@ mod tests {
             .iter()
             .filter(|&&name| syscall_id_by_name(name).is_some())
             .count();
-        
+
         assert_eq!(
             filter.matcher.syscall.len(),
             expected_count,

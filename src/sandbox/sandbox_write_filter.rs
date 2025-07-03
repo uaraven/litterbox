@@ -18,7 +18,7 @@
 
 use crate::filters::flag_matcher::FlagMatcher;
 use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher};
-use crate::filters::utils::syscall_id_by_name;
+use crate::filters::utils::{syscall_id_by_name, syscall_ids_by_names};
 use std::collections::{HashMap, HashSet};
 
 /// Creates a comprehensive write filter that blocks all filesystem-changing syscalls
@@ -38,7 +38,7 @@ pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
         // Direct write operations
         "write",
         "writev",
-        "pwrite",   
+        "pwrite",
         "pwrite64",
         "pwritev",
         "pwritev2",
@@ -69,10 +69,12 @@ pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
         "removexattr",
         "lremovexattr",
         "fremovexattr",
+        "removexattrat",
         // File permissions and ownership
         "chmod",
         "fchmod",
         "fchmodat",
+        "fchmodat2",
         "chown",
         "fchown",
         "lchown",
@@ -81,7 +83,7 @@ pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
         "utime",
         "utimes",
         "utimensat",
-        "futimens",
+        "futimesat",
         // Other filesystem operations
         "mknod",
         "mknodat",
@@ -90,25 +92,13 @@ pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
         "umount2",
         "pivot_root",
         "chroot",
-        "sync",
-        "syncfs",
-        "fsync",
-        "fdatasync",
     ];
 
     let open_syscalls = vec!["open", "openat", "openat2"];
 
     // Convert syscall names to IDs, filtering out any that don't exist on current architecture
-    let write_syscall_ids: HashSet<i64> = write_syscalls
-        .iter()
-        .filter_map(|&name| syscall_id_by_name(name))
-        .map(|id| id as i64)
-        .collect();
-    let open_syscall_ids = open_syscalls
-        .iter()
-        .filter_map(|&name| syscall_id_by_name(name))
-        .map(|id| id as i64)
-        .collect::<HashSet<i64>>();
+    let write_syscall_ids: HashSet<i64> = syscall_ids_by_names(write_syscalls);
+    let open_syscall_ids = syscall_ids_by_names(open_syscalls);
 
     // Create a flag matcher for O_CREAT to catch file creation attempts
     let flag_matcher = Some(FlagMatcher::new(vec!["O_CREAT".to_string()]));

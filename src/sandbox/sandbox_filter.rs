@@ -40,7 +40,7 @@ fn default_filter() -> SyscallFilter {
     }
 }
 
-fn create_sandbox_filters(
+pub(crate) fn create_sandbox_filters(
     logger: Box<dyn SyscallLogger>,
     allow_write: Vec<&str>,
     allow_connect: Vec<&str>,

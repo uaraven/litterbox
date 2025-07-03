@@ -81,7 +81,7 @@ fn main() {
             let filter_logger = match filters_from_args(cli) {
                 Ok(logger) => logger,
                 Err(e) => {
-                    eprintln!("Error initializing filters: {}", e.msg);
+                    eprintln!("Error initializing filters: {}", e.message);
                     std::process::exit(1);
                 }
             };
