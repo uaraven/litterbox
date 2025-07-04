@@ -17,5 +17,6 @@
  */
 pub mod common;
 pub mod delete;
+pub mod file_ops;
 pub mod open_close;
 pub mod rw;

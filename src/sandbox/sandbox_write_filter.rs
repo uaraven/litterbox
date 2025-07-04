@@ -18,7 +18,7 @@
 
 use crate::filters::flag_matcher::FlagMatcher;
 use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher};
-use crate::filters::utils::{syscall_id_by_name, syscall_ids_by_names};
+use crate::filters::utils::syscall_ids_by_names;
 use std::collections::{HashMap, HashSet};
 
 /// Creates a comprehensive write filter that blocks all filesystem-changing syscalls

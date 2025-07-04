@@ -71,7 +71,3 @@ pub(crate) struct Args {
     #[arg(required=true, num_args=1.., help="Program to run in litterbox and its arguments")]
     pub program: Vec<String>,
 }
-
-fn parse_args(params: Vec<String>) -> Args {
-    Args::parse_from(params)
-}

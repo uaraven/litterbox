@@ -24,7 +24,22 @@ use crate::filters::{
 };
 
 pub(crate) fn create_reader_filter() -> SyscallFilter {
-    let read_syscalls = vec!["read", "pread", "readv", "open", "openat"];
+    let read_syscalls = vec![
+        // read operations
+        "read",
+        "pread",
+        "readv",
+        // opening files
+        "open",
+        "openat",
+        // file descriptor operations
+        "stat",
+        "fstat",
+        "fstatat",
+        "lstat",
+        "getdents",
+        "getdents64",
+    ];
     let read_syscall_ids: HashSet<i64> = syscall_ids_by_names(read_syscalls);
 
     SyscallFilter {
@@ -111,9 +126,11 @@ mod tests {
         let filter = create_reader_filter();
 
         // Test that the filter has the expected number of syscalls
-        // Should have 5 syscalls (read, pread, readv, open, openat)
-        // But only those that exist on the current architecture
-        let expected_syscalls = vec!["read", "pread", "readv", "open", "openat"];
+        // Should include all read-related syscalls defined in create_reader_filter()
+        let expected_syscalls = vec![
+            "read", "pread", "readv", "open", "openat",
+            "stat", "fstat", "fstatat", "lstat", "getdents", "getdents64"
+        ];
         let expected_count = expected_syscalls
             .iter()
             .filter(|&&name| syscall_id_by_name(name).is_some())
