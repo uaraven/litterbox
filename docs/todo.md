@@ -31,10 +31,16 @@
     - openat
     - name_to_handle_at
     - open_by_handle_at
+    - [x] read
+    - [x] readv
+    - [x] pread
+    - [x] pread64
+    - [x] preadv
+    - [x] preadv2
   - write
-    - write
-    - writev
-    - pwrite
-    - pwrite64
-    - pwritev
-    - pwritev2
+    - [x] write
+    - [x] writev
+    - [x] pwrite
+    - [x] pwrite64
+    - [x] pwritev
+    - [x] pwritev2

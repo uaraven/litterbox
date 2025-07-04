@@ -18,8 +18,12 @@
 use std::cmp::min;
 use std::collections::HashMap;
 
+use nix::libc::{self, iovec};
+
 use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::{EXTRA_PATHNAME, MAX_BUFFER_SIZE, read_buffer, read_cstring};
+use crate::syscall_common::{
+    EXTRA_PATHNAME, MAX_BUFFER_SIZE, read_buffer, read_buffer_as_type, read_cstring,
+};
 use crate::syscall_parsers_file::common::add_fd_filepath;
 use crate::trace_process::TraceProcess;
 use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
@@ -78,6 +82,95 @@ pub(crate) fn parse_read(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
             SyscallArgument::Fd(fd),
             buffer_arg,
             SyscallArgument::Int(regs.regs[2]),
+        ]),
+        &regs,
+        extras,
+    )
+}
+
+// ssize_t readv(int fd, const struct iovec *iov, int iovcnt)
+// ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
+pub(crate) fn parse_readv_writev(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let is_entry = proc.is_entry(regs.syscall_id);
+    let mut extras: ExtraData = HashMap::new();
+    let fd = add_fd_filepath(proc, &regs, is_entry, &mut extras);
+    let iovec_ptr = regs.regs[1];
+    let iovcnt = regs.regs[2];
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([
+            SyscallArgument::Fd(fd),
+            SyscallArgument::Ptr(iovec_ptr),
+            SyscallArgument::Int(iovcnt),
+        ]),
+        &regs,
+        extras,
+    )
+}
+
+// ssize_t preadv(int fd, const struct iovec *iov, int iovcnt, off_t offset);
+// ssize_t pwritev(int fd, const struct iovec *iov, int iovcnt, off_t offset);
+pub(crate) fn parse_preadv_pwritev(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let is_entry = proc.is_entry(regs.syscall_id);
+    let mut extras: ExtraData = HashMap::new();
+    let fd = add_fd_filepath(proc, &regs, is_entry, &mut extras);
+    let iovec_ptr = regs.regs[1];
+    let iovcnt = regs.regs[2];
+    let offset = regs.regs[3];
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([
+            SyscallArgument::Fd(fd),
+            SyscallArgument::Ptr(iovec_ptr),
+            SyscallArgument::Int(iovcnt),
+            SyscallArgument::Int(offset),
+        ]),
+        &regs,
+        extras,
+    )
+}
+
+// ssize_t preadv2(int fd, const struct iovec *iov, int iovcnt, off_t offset, int flags);
+// ssize_t pwritev2(int fd, const struct iovec *iov, int iovcnt, off_t offset, int flags);
+pub(crate) fn parse_preadv2_pwritev2(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let is_entry = proc.is_entry(regs.syscall_id);
+    let mut extras: ExtraData = HashMap::new();
+    let fd = add_fd_filepath(proc, &regs, is_entry, &mut extras);
+    let iovec_ptr = regs.regs[1];
+    let iovcnt = regs.regs[2];
+    let offset = regs.regs[3];
+    let flags = regs.regs[4];
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([
+            SyscallArgument::Fd(fd),
+            SyscallArgument::Ptr(iovec_ptr),
+            SyscallArgument::Int(iovcnt),
+            SyscallArgument::Int(offset),
+            SyscallArgument::Bits(flags),
+        ]),
+        &regs,
+        extras,
+    )
+}
+
+// ssize_t pread(int fd, void buf[.count], size_t count, off_t offset);
+// ssize_t pwrite(int fd, const void buf[.count], size_t count, off_t offset);
+
+pub(crate) fn parse_pread64_pwrite64(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let is_entry = proc.is_entry(regs.syscall_id);
+    let mut extras: ExtraData = HashMap::new();
+    let fd = add_fd_filepath(proc, &regs, is_entry, &mut extras);
+    let buf = regs.regs[1];
+    let count = regs.regs[2];
+    let offset = regs.regs[3];
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([
+            SyscallArgument::Fd(fd),
+            SyscallArgument::Ptr(buf),
+            SyscallArgument::Int(count),
+            SyscallArgument::Int(offset),
         ]),
         &regs,
         extras,
