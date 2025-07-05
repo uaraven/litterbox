@@ -25,7 +25,7 @@ use crate::syscall_parsers_file::open_close::{parse_close, parse_openat, parse_o
 use crate::syscall_parsers_file::rw::parse_fchmodat;
 use crate::syscall_parsers_file::rw::{
     parse_chdir, parse_fchdir, parse_fchmod, parse_preadv_pwritev, parse_preadv2_pwritev2,
-    parse_readv_writev,
+    parse_read_write, parse_readv_writev,
 };
 use crate::syscall_parsers_process::{parse_clone, parse_clone3, parse_execve, parse_execveat};
 use crate::syscall_parsers_socket::{
@@ -47,7 +47,10 @@ use syscall_numbers::*;
 // const E_NO_SYS: u64 = (-(38i64)) as u64;
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
-    use crate::syscall_parsers_file::rw::parse_pread64_pwrite64;
+    use crate::syscall_parsers_file::{
+        file_ops::{parse_fstat, parse_fstatat},
+        rw::parse_pread64_pwrite64,
+    };
 
     let cid: c_long = id as i64;
     if cid < 0 {
@@ -57,18 +60,18 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         aarch64::SYS_openat => parse_openat,
         aarch64::SYS_openat2 => parse_openat2,
         aarch64::SYS_close => parse_close,
-        aarch64::SYS_write => parse_write,
+        aarch64::SYS_write => parse_read_write,
         aarch64::SYS_writev => parse_readv_writev,
         aarch64::SYS_pwritev => parse_preadv_pwritev,
         aarch64::SYS_pwritev2 => parse_preadv2_pwritev2,
         aarch64::SYS_pwrite64 => parse_pread64_pwrite64,
-        aarch64::SYS_read => parse_read,
+        aarch64::SYS_read => parse_read_write,
         aarch64::SYS_readv => parse_readv_writev,
         aarch64::SYS_preadv => parse_preadv_pwritev,
         aarch64::SYS_preadv2 => parse_preadv2_pwritev2,
         aarch64::SYS_pread64 => parse_pread64_pwrite64,
-        aarch64::SYS_stat | aarch64::SYS_lstat => parse_stat,
         aarch64::SYS_fstat => parse_fstat,
+        aarch64::SYS_newfstatat => parse_fstatat,
         aarch64::SYS_fchmod => parse_fchmod,
         aarch64::SYS_fchmodat => parse_fchmodat,
         aarch64::SYS_chdir => parse_chdir,

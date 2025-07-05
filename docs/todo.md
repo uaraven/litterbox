@@ -27,6 +27,12 @@
 
 
  - Handle more syscalls:
+  - [ ] dup/dup2/dup3 - map path to new fd
+  - [ ] fcntl with F_DUPFD/F_DUPFD_CLOEXEC flags
+  - [ ] chdir - log
+  - [ ] fchdir - log
+  - [ ] statfs - log
+  - [ ] fstatfs - log
   - read
     - openat
     - name_to_handle_at
@@ -38,9 +44,44 @@
     - [x] preadv
     - [x] preadv2
   - write
+    - [ ] access 
+    - [ ] faccessat/faccessat2
     - [x] write
     - [x] writev
     - [x] pwrite
     - [x] pwrite64
     - [x] pwritev
     - [x] pwritev2
+    - [ ] mmap with PROT_EXEC or PROT_WRITE protection flag
+    - [ ] sendfile
+    - [ ] chmod
+    - [ ] fchmod
+    - [ ] fchmodat
+    - [ ] chown/lchown
+    - [ ] fchown
+    - [ ] fchownat
+    - [ ] rename
+    - [ ] renameat
+    - [ ] renameat2
+    - [ ] mkdir
+    - [ ] mkdirat
+    - [ ] rmdir
+    - [ ] link
+    - [ ] linkat
+    - [ ] unlinkat
+    - [ ] symlink
+    - [ ] symlinkat
+    - [ ] mknod
+    - [ ] mknodat
+    - [ ] chroot - log
+    - [ ] name_to_handle_at
+    - [ ] open_by_handle_at
+  - network
+    - [ ] connect
+    - [ ] listen 
+  - process
+    - [ ] execve
+    - [ ] execveat
+  - system
+    - [ ] shutdown
+    - [ ] reboot

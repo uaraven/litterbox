@@ -27,7 +27,9 @@ use crate::{
 
 use super::common::add_dirfd_extra;
 
+#[cfg(target_arch = "x86_64")]
 // int unlink(const char *pathname);
+// not supported on aarch64
 pub(crate) fn parse_unlink_rmdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let is_entry = proc.is_entry(regs.syscall_id);
 

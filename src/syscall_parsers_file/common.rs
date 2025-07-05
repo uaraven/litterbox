@@ -1,5 +1,3 @@
-use std::path;
-
 /*
  * Litterbox - A sandboxing and tracing tool
  *

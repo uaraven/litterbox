@@ -29,6 +29,8 @@ use crate::{
     trace_process::TraceProcess,
 };
 
+#[cfg(target_arch = "x86_64")]
+// not supported on aarch64
 // int stat(const char *restrict pathname, struct stat *restrict statbuf);
 // int lstat(const char *restrict pathname, struct stat *restrict statbuf);
 pub(crate) fn parse_stat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {

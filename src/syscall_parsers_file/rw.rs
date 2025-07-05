@@ -19,7 +19,7 @@ use std::cmp::min;
 use std::collections::HashMap;
 
 use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::{EXTRA_PATHNAME, MAX_BUFFER_SIZE, read_buffer, read_cstring};
+use crate::syscall_common::{MAX_BUFFER_SIZE, read_buffer, read_cstring};
 use crate::syscall_parsers_file::common::{add_fd_filepath, read_pathname};
 use crate::trace_process::TraceProcess;
 use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
