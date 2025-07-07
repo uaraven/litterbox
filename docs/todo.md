@@ -44,6 +44,7 @@
     - [x] preadv
     - [x] preadv2
   - write
+    - [ ] open/openat with O_CREAT or O_TRUNC flags
     - [ ] access 
     - [ ] faccessat/faccessat2
     - [x] write
@@ -52,7 +53,7 @@
     - [x] pwrite64
     - [x] pwritev
     - [x] pwritev2
-    - [ ] mmap with PROT_EXEC or PROT_WRITE protection flag
+    - [ ] mmap with PROT_WRITE protection flag
     - [ ] sendfile
     - [ ] chmod
     - [ ] fchmod
