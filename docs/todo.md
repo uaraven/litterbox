@@ -14,15 +14,12 @@
         - [x] no color
     - [x] JSONL logging
 - [ ] DNS sniffing
-- [ ] Simple filtering
-  - [ ] Simple file filtering
-    - [ ] Block reads in directories
-    - [ ] Block writes in directories
-  - [ ] Simple network filtering
-    - [ ] Block connections to IP addresses/Hosts
-    - [ ] Block server sockets
-  - [ ] Simple subprocess filtering
-    - [ ] Block spawning processes by name
+- [ ] Simple sandboxing
+  - [ ] Block all writes except designated directories
+  - [ ] Block all outgoing connections except designated IP addresses/Hosts
+  - [ ] Block server sockets
+  - [ ] Block spawning processes except designated apps by path
+  - [ ] Block shutdown and reboot
 
 
 
@@ -34,9 +31,9 @@
   - [ ] statfs - log
   - [ ] fstatfs - log
   - read
-    - openat
-    - name_to_handle_at
-    - open_by_handle_at
+    - [ ] openat
+    - [ ] name_to_handle_at
+    - [ ] open_by_handle_at
     - [x] read
     - [x] readv
     - [x] pread
