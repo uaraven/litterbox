@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use nix::errno::Errno;
 use nix::libc::{PTRACE_EVENT_CLONE, PTRACE_EVENT_EXEC, PTRACE_EVENT_FORK, PTRACE_EVENT_VFORK};
 use nix::sys::signal::Signal;
-use nix::sys::wait::{WaitStatus, waitpid};
+use nix::sys::wait::{waitpid, WaitStatus};
 use nix::sys::{ptrace, signal};
 use nix::unistd::Pid;
 

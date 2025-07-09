@@ -95,6 +95,9 @@ impl SyscallMatcher {
                 {
                     return false;
                 }
+            } else {
+                // if there is a filter expecting filepath and event doesn't have filepath, don't match
+                return false;
             }
         }
 
@@ -103,6 +106,9 @@ impl SyscallMatcher {
                 if !address_matcher.matches(syscall_addr) {
                     return false;
                 }
+            } else {
+                // if there is a filter expecting addr and event doesn't have addr, don't match
+                return false;
             }
         }
 
@@ -111,6 +117,9 @@ impl SyscallMatcher {
                 if !flag_matcher.matches(flags) {
                     return false;
                 }
+            } else {
+                // if there is a filter expecting flags and event doesn't have flags, don't match
+                return false;
             }
         }
 

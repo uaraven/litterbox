@@ -16,7 +16,6 @@
  *
  */
 mod cli_args;
-mod fd_utils;
 mod filter_listener;
 mod filter_loader;
 mod filters;
@@ -29,19 +28,16 @@ mod strace;
 mod syscall_args;
 mod syscall_common;
 mod syscall_event;
-mod syscall_parser;
-mod syscall_parsers_file;
-mod syscall_parsers_process;
-mod syscall_parsers_socket;
 mod tests;
 mod trace_process;
+mod parsers;
 
 use clap::Parser;
 use cli_args::Args;
 use filter_listener::FilteringLogger;
 use loggers::text_logger::TextLogger;
 use nix::sys::ptrace;
-use nix::unistd::{ForkResult, fork};
+use nix::unistd::{fork, ForkResult};
 
 use crate::filter_loader::filters_from_args;
 

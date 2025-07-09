@@ -21,7 +21,9 @@ use std::{
     vec,
 };
 
+use crate::filters::address_matcher::AddressMatcher;
 use crate::filters::syscall_filter::SyscallMatcher;
+use crate::sandbox::sandbox_network::create_network_filter;
 #[cfg(test)]
 use crate::{
     FilteringLogger,
@@ -66,6 +68,17 @@ fn make_test_event(id: u64, extra_path: Option<&str>) -> SyscallEvent {
         blocked: false,
         label: None,
     }
+}
+
+#[test]
+fn test_group_syscalls_in_filtering_logger() {
+    let logger = FilteringLogger::new(create_network_filter(vec!["192.168."]), None, None);
+    let connect_filter = logger.filters.get(&(native::SYS_connect as u64));
+    assert!(connect_filter.is_some());
+    assert_eq!(connect_filter.unwrap().len(), 3);
+    let connect_filter = logger.filters.get(&(native::SYS_listen as u64));
+    assert!(connect_filter.is_some());
+    assert_eq!(connect_filter.unwrap().len(), 2);
 }
 
 #[test]
@@ -296,4 +309,94 @@ fn test_handle_filter_matching_by_path_prefix() {
     };
     let result = logger.process_event(&proc, &good_event).unwrap();
     assert_eq!(result.label, None);
+}
+
+#[test]
+fn test_handle_filter_with_filepath_on_event_without_filepath() {
+    let filter = SyscallFilter {
+        matcher: SyscallMatcher {
+            syscall: [native::SYS_openat].into(),
+            args: Default::default(),
+            context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
+                vec!["/tmp/".to_string()],
+                StrMatchOp::Prefix,
+                false,
+            ))),
+            flag_matcher: None,
+        },
+        outcome: FilterOutcome {
+            action: FilterAction::Block(1),
+            log: false,
+            tag: Some("blocked".to_string()),
+        },
+    };
+    let mut logger = FilteringLogger::new(vec![filter], None, None);
+    let proc = TraceProcess::new(Pid::from_raw(1000));
+    let no_path_event = create_event_empty_extras(native::SYS_openat as u64);
+    let result = logger.process_event(&proc, &no_path_event).unwrap();
+    assert_eq!(result.blocked, false);
+}
+
+#[test]
+fn test_handle_filter_with_addr_on_event_without_addr() {
+    let filter = SyscallFilter {
+        matcher: SyscallMatcher {
+            syscall: [native::SYS_connect].into(),
+            args: Default::default(),
+            context_matcher: Some(ContextMatcher::AddressMatcher(AddressMatcher::new(
+                vec!["192.168.".to_string()],
+                StrMatchOp::Prefix,
+                None,
+            ))),
+            flag_matcher: None,
+        },
+        outcome: FilterOutcome {
+            action: FilterAction::Block(1),
+            log: false,
+            tag: Some("blocked".to_string()),
+        },
+    };
+    let mut logger = FilteringLogger::new(vec![filter], None, None);
+    let proc = TraceProcess::new(Pid::from_raw(1000));
+    let no_addr_event = create_event_empty_extras(native::SYS_connect as u64);
+    let result = logger.process_event(&proc, &no_addr_event).unwrap();
+    assert_eq!(result.blocked, false);
+}
+
+#[test]
+fn test_handle_filter_with_flags_on_event_without_flags() {
+    let filter = SyscallFilter {
+        matcher: SyscallMatcher {
+            syscall: [native::SYS_connect].into(),
+            args: Default::default(),
+            context_matcher: None,
+            flag_matcher: Some(FlagMatcher::new(vec!["O_RDONLY".to_string()])),
+        },
+        outcome: FilterOutcome {
+            action: FilterAction::Block(1),
+            log: false,
+            tag: Some("blocked".to_string()),
+        },
+    };
+    let mut logger = FilteringLogger::new(vec![filter], None, None);
+    let proc = TraceProcess::new(Pid::from_raw(1000));
+    let no_path_event = create_event_empty_extras(native::SYS_openat as u64);
+    let result = logger.process_event(&proc, &no_path_event).unwrap();
+    assert_eq!(result.blocked, false);
+}
+
+fn create_event_empty_extras(syscall_id: u64) -> SyscallEvent {
+    SyscallEvent {
+        id: syscall_id,
+        name: "openat".to_string(),
+        pid: 1000,
+        set_syscall_id: fake_syscall_id,
+        arguments: vec![],
+        regs: Regs::default(),
+        return_value: 0,
+        stop_type: SyscallStopType::Enter,
+        extra_context: HashMap::default(),
+        blocked: false,
+        label: None,
+    }
 }

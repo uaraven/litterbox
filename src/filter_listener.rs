@@ -19,7 +19,6 @@ use std::collections::HashMap;
 
 use crate::filters::syscall_filter::SyscallMatcher;
 use crate::{
-    TextLogger,
     filters::{
         syscall_filter::{FilterAction, SyscallFilter},
         utils::group_filters_by_syscall,
@@ -28,6 +27,7 @@ use crate::{
     preconfigured::default::default_filters,
     syscall_event::{SyscallEvent, SyscallEventListener},
     trace_process::TraceProcess,
+    TextLogger,
 };
 
 pub(crate) struct FilteringLogger {
@@ -57,7 +57,14 @@ impl FilteringLogger {
                 defaults.push(filter);
                 continue;
             } else {
-                filter_map.extend(group_filters_by_syscall(vec![filter]));
+                let filter_group = group_filters_by_syscall(vec![filter]);
+                filter_group.iter().for_each(|filter| {
+                    if let Some(filter_map_entry) = filter_map.get_mut(filter.0) {
+                        filter_map_entry.extend(filter.1.iter().map(|f|f.clone()));
+                    } else {
+                        filter_map.insert(*filter.0, filter.1.clone());
+                    }
+                })
             }
         }
         Self {

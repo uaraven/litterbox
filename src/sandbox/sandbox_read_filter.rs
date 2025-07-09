@@ -51,7 +51,7 @@ pub(crate) fn create_reader_filter() -> SyscallFilter {
         },
         outcome: FilterOutcome {
             action: FilterAction::Allow,
-            tag: None,
+            tag: Some("read".to_string()),
             log: true,
         },
     }
@@ -92,8 +92,8 @@ mod tests {
 
         assert!(filter.outcome.log, "Reader filter should log syscalls");
         assert_eq!(
-            filter.outcome.tag, None,
-            "Reader filter should not tag syscalls"
+            filter.outcome.tag, Some("read".to_string()),
+            "Reader filter should tag syscalls with 'read'"
         );
     }
 

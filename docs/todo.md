@@ -22,6 +22,11 @@
   - [ ] Block shutdown and reboot
 
 
+## Limitations
+
+Following syscalls are not parsed now. Sandbox mode blocks these syscalls right away:
+ - name_to_handle_at
+ - open_by_handle_at
 
  - Handle more syscalls:
   - [ ] dup/dup2/dup3 - map path to new fd
@@ -31,9 +36,9 @@
   - [ ] statfs - log
   - [ ] fstatfs - log
   - read
-    - [ ] openat
-    - [ ] name_to_handle_at
-    - [ ] open_by_handle_at
+    - [x] openat
+    - [x] name_to_handle_at
+    - [x] open_by_handle_at
     - [x] read
     - [x] readv
     - [x] pread
@@ -42,8 +47,8 @@
     - [x] preadv2
   - write
     - [x] open/openat with O_CREAT or O_TRUNC flags
-    - [ ] access 
-    - [ ] faccessat/faccessat2
+    - [x] access
+    - [x] faccessat/faccessat2
     - [x] write
     - [x] writev
     - [x] pwrite
@@ -52,9 +57,11 @@
     - [x] pwritev2
     - [ ] mmap with PROT_WRITE protection flag
     - [ ] sendfile
-    - [ ] chmod
-    - [ ] fchmod
-    - [ ] fchmodat
+    - [x] chmod
+    - [x] fchmod
+    - [x] fchmodat
+    - [x] chdir
+    - [x] fchdir
     - [ ] chown/lchown
     - [ ] fchown
     - [ ] fchownat

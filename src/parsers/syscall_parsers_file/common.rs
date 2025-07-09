@@ -15,27 +15,30 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
+use crate::parsers::syscall_parsers_file::fd_utils::is_fdcwd;
 use crate::{
-    fd_utils::is_fdcwd,
     regs::Regs,
     syscall_args::SyscallArgument,
-    syscall_common::{EXTRA_CWD, EXTRA_DIRFD, EXTRA_PATHNAME, read_cstring},
+    syscall_common::{read_cstring, EXTRA_CWD, EXTRA_DIRFD, EXTRA_PATHNAME},
     syscall_event::ExtraData,
     trace_process::TraceProcess,
 };
 
+/// Reads pathname from a syscall parameter. If c-string was successfully read, stores
+/// the string in the extras with the name [EXTRA_PATHNAME]
+/// Returns a tuple containing pathname as a string and as a [SyscallArgument]
 pub(crate) fn read_pathname(
     proc: &mut TraceProcess,
     regs: &Regs,
-    pathname_reg: usize,
+    pathname_param_no: usize,
     extra: &mut ExtraData,
 ) -> (String, SyscallArgument) {
     let (pathname, pathname_arg) =
-        match read_cstring(proc.get_pid(), regs.regs[pathname_reg] as usize) {
+        match read_cstring(proc.get_pid(), regs.regs[pathname_param_no] as usize) {
             Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
             Err(_) => (
                 "".to_string(),
-                SyscallArgument::Ptr(regs.regs[pathname_reg]),
+                SyscallArgument::Ptr(regs.regs[pathname_param_no]),
             ),
         };
     if !pathname.is_empty() {
@@ -44,6 +47,10 @@ pub(crate) fn read_pathname(
     (pathname.clone(), pathname_arg)
 }
 
+/// Analyzes the dirfd parameter. If it contains AT_FDCWD value, then current working directory
+/// is saved as [EXTRA_CWD] extra.
+/// In other case, process is searched for a filepath associated with the file descriptor in `dirfd`
+/// and, if found, it is stored as [EXTRA_DIRFD]
 pub(crate) fn add_dirfd_extra(proc: &mut TraceProcess, dirfd: i64, extra: &mut ExtraData) {
     if is_fdcwd(dirfd as i32) {
         extra.insert(EXTRA_CWD, proc.get_cwd());
@@ -52,6 +59,9 @@ pub(crate) fn add_dirfd_extra(proc: &mut TraceProcess, dirfd: i64, extra: &mut E
     }
 }
 
+/// File descriptor value is read from syscall argument 0. If there is a filepath associated with
+/// the descriptor, it is stored in extras with key [EXTRA_PATHNAME].
+/// The value of the file descriptor is returned
 pub(crate) fn add_fd_filepath(proc: &mut TraceProcess, regs: &Regs, extras: &mut ExtraData) -> u64 {
     let is_entry = proc.is_entry(regs.syscall_id);
     let fd = match is_entry {

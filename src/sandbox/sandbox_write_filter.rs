@@ -108,7 +108,7 @@ pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
 
     let filter_outcome = FilterOutcome {
         action: FilterAction::Block(-1), // EPERM error code
-        tag: Some("WRITE_BLOCKED".to_string()),
+        tag: Some("write".to_string()),
         log: true,
     };
     vec![
@@ -175,7 +175,7 @@ mod tests {
             }
 
             assert!(filter.outcome.log);
-            assert_eq!(filter.outcome.tag, Some("WRITE_BLOCKED".to_string()));
+            assert_eq!(filter.outcome.tag, Some("write".to_string()));
         }
     }
 

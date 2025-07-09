@@ -19,9 +19,9 @@ use syscall_numbers::native;
 
 use crate::filters::matcher::StrMatchOp;
 use crate::{
-    FilteringLogger,
     filters::syscall_filter::{FilterOutcome, SyscallFilter},
     loggers::syscall_logger::SyscallLogger,
+    FilteringLogger,
 };
 use std::collections::HashSet;
 

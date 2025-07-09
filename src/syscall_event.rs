@@ -15,13 +15,13 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
+use crate::parsers::syscall_parser::syscall_parser;
 use crate::regs::Regs;
 use crate::syscall_args::SyscallArgument;
 use crate::syscall_common::{
-    EXTRA_ADDR, EXTRA_CWD, EXTRA_DIRFD, EXTRA_FLAGS, EXTRA_PATHNAME, get_syscall_name,
+    get_syscall_name, EXTRA_ADDR, EXTRA_CWD, EXTRA_DIRFD, EXTRA_FLAGS, EXTRA_PATHNAME,
 };
-use crate::syscall_parser::syscall_parser;
-use crate::trace_process::{SetSyscallId, TraceProcess, set_syscall_id};
+use crate::trace_process::{set_syscall_id, SetSyscallId, TraceProcess};
 use nix::libc::{self, user_regs_struct};
 use nix::sys::ptrace;
 use nix::unistd::Pid;

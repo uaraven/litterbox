@@ -16,38 +16,38 @@
  *
  */
 
+use crate::parsers::syscall_parsers_file::delete::parse_unlinkat;
+use crate::parsers::syscall_parsers_file::open_close::{parse_access, parse_close, parse_faccessat, parse_openat, parse_openat2};
+use crate::parsers::syscall_parsers_file::rw::{
+    parse_preadv2_pwritev2, parse_preadv_pwritev,
+    parse_readv_writev, parse_read_write,parse_pread64_pwrite64,
+};
+use crate::parsers::syscall_parsers_process::{parse_clone, parse_clone3, parse_execve, parse_execveat};
+use crate::parsers::syscall_parsers_socket::{
+    parse_bind, parse_connect, parse_listen, parse_recvfrom, parse_recvmsg,
+};
 use crate::regs::Regs;
 use crate::syscall_args::SyscallArgument;
 use crate::syscall_common::SyscallParserFn;
 use crate::syscall_event::SyscallEvent;
-use crate::syscall_parsers_file::delete::parse_unlinkat;
-use crate::syscall_parsers_file::open_close::{parse_close, parse_openat, parse_openat2};
-use crate::syscall_parsers_file::rw::parse_fchmodat;
-use crate::syscall_parsers_file::rw::{
-    parse_chdir, parse_fchdir, parse_fchmod, parse_preadv_pwritev, parse_preadv2_pwritev2,
-    parse_read_write, parse_readv_writev,
-};
-use crate::syscall_parsers_process::{parse_clone, parse_clone3, parse_execve, parse_execveat};
-use crate::syscall_parsers_socket::{
-    parse_bind, parse_connect, parse_listen, parse_recvfrom, parse_recvmsg,
-};
 
 use crate::trace_process::TraceProcess;
 
 #[cfg(target_arch = "x86_64")]
-use crate::syscall_parsers_file::delete::parse_unlink_rmdir;
+use crate::parsers::syscall_parsers_file::delete::parse_unlink_rmdir;
 #[cfg(target_arch = "x86_64")]
-use crate::syscall_parsers_file::open_close::{parse_creat, parse_open};
+use crate::parsers::syscall_parsers_file::open_close::{parse_creat, parse_open};
 // #[cfg(target_arch = "x86_64")]
 // use crate::syscall_parsers_socket::parse_recv;
 
+use crate::parsers::syscall_parsers_file::file_ops::{parse_chdir, parse_fchdir, parse_fchmod, parse_fchmodat, parse_fstat, parse_fstatat, parse_stat};
 use std::ffi::c_long;
 use syscall_numbers::*;
 
 // const E_NO_SYS: u64 = (-(38i64)) as u64;
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
-    use crate::syscall_parsers_file::{
+    use crate::parsers::syscall_parsers_file::{
         file_ops::{parse_fstat, parse_fstatat},
         rw::parse_pread64_pwrite64,
     };
@@ -70,6 +70,8 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         aarch64::SYS_preadv => parse_preadv_pwritev,
         aarch64::SYS_preadv2 => parse_preadv2_pwritev2,
         aarch64::SYS_pread64 => parse_pread64_pwrite64,
+        aarch64::SYS_access => parse_access,
+        aarch64::SYS_faccessat | aarch64::SYS_faccessat2 => parse_faccessat,
         aarch64::SYS_fstat => parse_fstat,
         aarch64::SYS_newfstatat => parse_fstatat,
         aarch64::SYS_fchmod => parse_fchmod,
@@ -92,11 +94,6 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
 
 #[cfg(target_arch = "x86_64")]
 pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
-    use crate::syscall_parsers_file::{
-        file_ops::{parse_fstat, parse_fstatat, parse_stat},
-        rw::{parse_pread64_pwrite64, parse_read_write},
-    };
-
     let cid: c_long = id as i64;
     if cid < 0 {
         return parse_default;
@@ -117,14 +114,16 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         x86_64::SYS_preadv => parse_preadv_pwritev,
         x86_64::SYS_preadv2 => parse_preadv2_pwritev2,
         x86_64::SYS_pread64 => parse_pread64_pwrite64,
+        x86_64::SYS_access => parse_access,
+        x86_64::SYS_faccessat | x86_64::SYS_faccessat2 => parse_faccessat,
         x86_64::SYS_chmod => parse_fchmod,
         x86_64::SYS_fchmod => parse_fchmod,
         x86_64::SYS_fchmodat => parse_fchmodat,
+        x86_64::SYS_chdir => parse_chdir,
+        x86_64::SYS_fchdir => parse_fchdir,
         x86_64::SYS_stat | x86_64::SYS_lstat => parse_stat,
         x86_64::SYS_fstat => parse_fstat,
         x86_64::SYS_newfstatat => parse_fstatat,
-        x86_64::SYS_chdir => parse_chdir,
-        x86_64::SYS_fchdir => parse_fchdir,
         x86_64::SYS_unlink | x86_64::SYS_rmdir => parse_unlink_rmdir,
         x86_64::SYS_unlinkat => parse_unlinkat,
         x86_64::SYS_clone => parse_clone,

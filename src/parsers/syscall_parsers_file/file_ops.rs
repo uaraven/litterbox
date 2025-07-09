@@ -15,120 +15,65 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
-use std::cmp::min;
+/*
+ * This module contains parsers for file operations syscalls other than read/write.
+ */
+
 use std::collections::HashMap;
 
-use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::{MAX_BUFFER_SIZE, read_buffer, read_cstring};
-use crate::syscall_parsers_file::common::{add_fd_filepath, read_pathname};
-use crate::trace_process::TraceProcess;
-use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
+use crate::parsers::syscall_parsers_file::common::{add_dirfd_extra, add_fd_filepath, read_pathname};
+use crate::syscall_common::read_cstring;
+use crate::{
+    regs::Regs,
+    syscall_args::SyscallArgument,
+    syscall_event::{ExtraData, SyscallEvent},
+    trace_process::TraceProcess,
+};
 
-use super::common::add_dirfd_extra;
-
-// ssize_t read(int fd, void buf[.count], size_t count);
-// ssize_t write(int fd, const void buf[.count], size_t count);
-pub(crate) fn parse_read_write(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+#[cfg(target_arch = "x86_64")]
+// not supported on aarch64
+// int stat(const char *restrict pathname, struct stat *restrict statbuf);
+// int lstat(const char *restrict pathname, struct stat *restrict statbuf);
+pub(crate) fn parse_stat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
-    // on arm64, the fd in regs[0] is rewritten with the return value on the exit from syscall
-    // so we need to use the fd from the entry event
-    let fd = add_fd_filepath(proc, &regs, &mut extras);
-    let read_size = min(MAX_BUFFER_SIZE, regs.regs[2] as usize);
-    let buffer_arg = match read_buffer(proc.get_pid(), regs.regs[1] as usize, read_size) {
-        Ok(buffer) => SyscallArgument::Bytes(buffer),
-        Err(_) => SyscallArgument::Ptr(regs.regs[1]),
-    };
+    let (_, pathname_arg) = read_pathname(proc, &regs, 0, &mut extras);
+
     SyscallEvent::new_with_extras(
         proc,
-        Vec::from([
-            SyscallArgument::Fd(fd),
-            buffer_arg,
-            SyscallArgument::Int(regs.regs[2]),
-        ]),
+        Vec::from([pathname_arg, SyscallArgument::Ptr(regs.regs[1])]),
         &regs,
         extras,
     )
 }
 
-// ssize_t readv(int fd, const struct iovec *iov, int iovcnt)
-// ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
-pub(crate) fn parse_readv_writev(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+// int fstat(int fd, struct stat *statbuf);
+pub(crate) fn parse_fstat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
     let fd = add_fd_filepath(proc, &regs, &mut extras);
-    let iovec_ptr = regs.regs[1];
-    let iovcnt = regs.regs[2];
+
     SyscallEvent::new_with_extras(
         proc,
-        Vec::from([
-            SyscallArgument::Fd(fd),
-            SyscallArgument::Ptr(iovec_ptr),
-            SyscallArgument::Int(iovcnt),
-        ]),
+        Vec::from([SyscallArgument::Fd(fd), SyscallArgument::Ptr(regs.regs[1])]),
         &regs,
         extras,
     )
 }
 
-// ssize_t preadv(int fd, const struct iovec *iov, int iovcnt, off_t offset);
-// ssize_t pwritev(int fd, const struct iovec *iov, int iovcnt, off_t offset);
-pub(crate) fn parse_preadv_pwritev(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+pub(crate) fn parse_fstatat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
-    let fd = add_fd_filepath(proc, &regs, &mut extras);
-    let iovec_ptr = regs.regs[1];
-    let iovcnt = regs.regs[2];
-    let offset = regs.regs[3];
+    let dirfd = regs.regs[0];
+    let (_, pathname_arg) = read_pathname(proc, &regs, 1, &mut extras);
+    let flags = regs.regs[3];
+
+    add_dirfd_extra(proc, dirfd as i64, &mut extras);
+
     SyscallEvent::new_with_extras(
         proc,
         Vec::from([
-            SyscallArgument::Fd(fd),
-            SyscallArgument::Ptr(iovec_ptr),
-            SyscallArgument::Int(iovcnt),
-            SyscallArgument::Int(offset),
-        ]),
-        &regs,
-        extras,
-    )
-}
-
-// ssize_t preadv2(int fd, const struct iovec *iov, int iovcnt, off_t offset, int flags);
-// ssize_t pwritev2(int fd, const struct iovec *iov, int iovcnt, off_t offset, int flags);
-pub(crate) fn parse_preadv2_pwritev2(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let mut extras: ExtraData = HashMap::new();
-    let fd = add_fd_filepath(proc, &regs, &mut extras);
-    let iovec_ptr = regs.regs[1];
-    let iovcnt = regs.regs[2];
-    let offset = regs.regs[3];
-    let flags = regs.regs[4];
-    SyscallEvent::new_with_extras(
-        proc,
-        Vec::from([
-            SyscallArgument::Fd(fd),
-            SyscallArgument::Ptr(iovec_ptr),
-            SyscallArgument::Int(iovcnt),
-            SyscallArgument::Int(offset),
-            SyscallArgument::Bits(flags),
-        ]),
-        &regs,
-        extras,
-    )
-}
-
-// ssize_t pread(int fd, void buf[.count], size_t count, off_t offset);
-// ssize_t pwrite(int fd, const void buf[.count], size_t count, off_t offset);
-
-pub(crate) fn parse_pread64_pwrite64(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let mut extras: ExtraData = HashMap::new();
-    let fd = add_fd_filepath(proc, &regs, &mut extras);
-    let buf = regs.regs[1];
-    let count = regs.regs[2];
-    let offset = regs.regs[3];
-    SyscallEvent::new_with_extras(
-        proc,
-        Vec::from([
-            SyscallArgument::Fd(fd),
-            SyscallArgument::Ptr(buf),
-            SyscallArgument::Int(count),
-            SyscallArgument::Int(offset),
+            SyscallArgument::Int(dirfd),
+            pathname_arg,
+            SyscallArgument::Ptr(regs.regs[2]),
+            SyscallArgument::Int(flags),
         ]),
         &regs,
         extras,
@@ -216,7 +161,3 @@ pub(crate) fn parse_fchdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent 
         extras,
     )
 }
-
-// int ioctl(int fd, unsigned long op, ...);  /* glibc, BSD */
-// int ioctl(int fd, int op, ...);            /* musl, other UNIX */
-// ssize_t copy_file_range(int fd_in, off_t *_Nullable off_in, int fd_out, off_t *_Nullable off_out, size_t size, unsigned int flags);

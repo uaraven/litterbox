@@ -19,7 +19,7 @@
 use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use crate::flags::{clone_flags_to_str, dir_fd_to_str, open_flags_to_str};
+use crate::flags::{clone_flags_to_str, dir_fd_to_str, file_mode_to_str, open_flags_to_str};
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub enum SyscallArgument {
@@ -34,6 +34,7 @@ pub enum SyscallArgument {
     IpV6Address { addr: Ipv6Addr, port: u16 },
     OpenFlags(u64),
     CloneFlags(u64),
+    FileMode(u64),
     DirFd(u64),
     Raw(u64),
 }
@@ -63,6 +64,7 @@ impl fmt::Display for SyscallArgument {
             SyscallArgument::DirFd(fd) => write!(f, "{}", dir_fd_to_str(*fd)),
             SyscallArgument::Raw(raw) => write!(f, "0x{:x}", raw),
             SyscallArgument::CloneFlags(flags) => write!(f, "{}", clone_flags_to_str(*flags)),
+            SyscallArgument::FileMode(mode) => write!(f, "{}", file_mode_to_str(*mode)),
         }
     }
 }

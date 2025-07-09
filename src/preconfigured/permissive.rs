@@ -19,9 +19,9 @@ use std::{collections::HashSet, vec};
 
 use crate::filters::syscall_filter::SyscallMatcher;
 use crate::{
-    FilteringLogger,
     filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter},
     loggers::syscall_logger::SyscallLogger,
+    FilteringLogger,
 };
 
 // This function returns a permissive filtering logger.

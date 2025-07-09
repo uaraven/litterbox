@@ -131,3 +131,9 @@ pub(crate) fn clone_flags_to_str(flags: u64) -> String {
     flags_s.push_str(format!(" 0x{:x}", flags).as_str());
     flags_s
 }
+
+
+pub(crate) fn file_mode_to_str(flags: u64) -> String {
+    let f = flags as libc::mode_t;
+    strmode::strmode(f)
+}

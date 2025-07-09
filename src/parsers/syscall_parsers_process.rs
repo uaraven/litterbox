@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use crate::{
     regs::Regs,
     syscall_args::SyscallArgument,
-    syscall_common::{EXTRA_FLAGS, read_buffer, read_cstring},
+    syscall_common::{read_buffer, read_cstring, EXTRA_FLAGS},
     syscall_event::{ExtraData, SyscallEvent},
     trace_process::TraceProcess,
 };

@@ -15,14 +15,13 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
-use syscall_numbers::native;
 
 use crate::filters::syscall_filter::{FilterAction, SyscallMatcher};
 use crate::filters::utils::group_filters_by_syscall;
 use crate::loggers::syscall_logger::SyscallLogger;
 use crate::{
-    FilteringLogger,
     filters::syscall_filter::{FilterOutcome, SyscallFilter},
+    FilteringLogger,
 };
 use std::collections::HashSet;
 

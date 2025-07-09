@@ -17,7 +17,7 @@
  */
 #[cfg(test)]
 use crate::filters::{
-    dto::SyscallFilterDto, dto::parse_compare_op, matcher::StrMatchOp, syscall_filter::FilterAction,
+    dto::parse_compare_op, dto::SyscallFilterDto, matcher::StrMatchOp, syscall_filter::FilterAction,
 };
 #[cfg(test)]
 use serde_json::json;

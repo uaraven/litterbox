@@ -26,12 +26,12 @@ use super::{
     utils::syscall_id_by_name,
 };
 use crate::{
-    FilteringLogger,
     filters::{
         address_matcher::AddressMatcher, context_matcher::ContextMatcher, matcher::StrMatchOp,
         syscall_filter::SyscallMatcher,
     },
     loggers::syscall_logger::SyscallLogger,
+    FilteringLogger,
 };
 
 #[derive(Debug)]

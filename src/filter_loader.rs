@@ -18,11 +18,11 @@
 use std::fmt::Display;
 
 use crate::{
-    FilteringLogger, TextLogger,
-    cli_args::{self, Args},
-    filters::dto::load_syscall_filter,
+    cli_args::{self, Args}, filters::dto::load_syscall_filter,
     loggers::{jsonl_logger::JsonlLogger, syscall_logger::SyscallLogger},
     sandbox::sandbox_filter::create_sandbox_filters,
+    FilteringLogger,
+    TextLogger,
 };
 
 pub struct FilterError {
