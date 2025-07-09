@@ -33,7 +33,10 @@ pub(crate) fn read_pathname(
     let (pathname, pathname_arg) =
         match read_cstring(proc.get_pid(), regs.regs[pathname_reg] as usize) {
             Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
-            Err(_) => ("".to_string(), SyscallArgument::Ptr(regs.regs[0])),
+            Err(_) => (
+                "".to_string(),
+                SyscallArgument::Ptr(regs.regs[pathname_reg]),
+            ),
         };
     if !pathname.is_empty() {
         extra.insert(EXTRA_PATHNAME, pathname.clone());
