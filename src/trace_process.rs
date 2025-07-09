@@ -22,12 +22,10 @@ use std::{
 };
 
 use nix::{
-    errno::Errno,
     libc::{self, user_regs_struct},
     unistd::Pid,
 };
 
-use std::ffi::c_void;
 
 use crate::syscall_event::{SyscallEvent, SyscallStopType};
 

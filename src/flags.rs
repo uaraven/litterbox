@@ -99,6 +99,9 @@ pub(crate) fn open_flags_to_str(flags: u64) -> String {
     if oflag.contains(OFlag::O_TMPFILE) {
         s.push("O_TMPFILE");
     }
+    if oflag.contains(OFlag::O_TRUNC) {
+        s.push("O_TRUNC");
+    }
     s.join("|")
 }
 

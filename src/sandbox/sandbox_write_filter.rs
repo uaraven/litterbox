@@ -100,8 +100,11 @@ pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
     let write_syscall_ids: HashSet<i64> = syscall_ids_by_names(write_syscalls);
     let open_syscall_ids = syscall_ids_by_names(open_syscalls);
 
-    // Create a flag matcher for O_CREAT to catch file creation attempts
-    let flag_matcher = Some(FlagMatcher::new(vec!["O_CREAT".to_string()]));
+    // Create a flag matcher for O_CREAT to catch file creation attempts and O_TRUNC to catch truncation attempts
+    let flag_matcher = Some(FlagMatcher::new(vec![
+        "O_CREAT".to_string(),
+        "O_TRUNC".to_string(),
+    ]));
 
     let filter_outcome = FilterOutcome {
         action: FilterAction::Block(-1), // EPERM error code
@@ -195,6 +198,106 @@ mod tests {
         }
         if let Some(openat_id) = syscall_id_by_name("openat") {
             assert!(open_filter.matcher.syscall.contains(&(openat_id as i64)));
+        }
+    }
+
+    #[test]
+    fn test_open_with_o_trunc_flag_blocked() {
+        use crate::regs::Regs;
+        use crate::syscall_common::EXTRA_FLAGS;
+        use crate::syscall_event::{SyscallEvent, SyscallStopType};
+        use crate::trace_process::TraceProcess;
+        use std::collections::HashMap;
+
+        let filters = create_write_filter();
+        let open_filter = filters
+            .iter()
+            .find(|f| f.matcher.flag_matcher.is_some())
+            .unwrap();
+
+        // Create a mock TraceProcess
+        let proc = TraceProcess::new(nix::unistd::Pid::from_raw(1000));
+
+        // Create a mock SyscallEvent for open syscall with O_TRUNC flag
+        let mut extra = HashMap::new();
+        extra.insert(EXTRA_FLAGS, "O_TRUNC".to_string());
+
+        let mut regs = Regs::default();
+        if let Some(open_id) = syscall_id_by_name("open") {
+            regs.syscall_id = open_id;
+        }
+
+        let event = SyscallEvent {
+            id: regs.syscall_id,
+            name: "open".to_string(),
+            set_syscall_id: |_, _, _| Ok(()),
+            pid: 1000,
+            arguments: Default::default(),
+            regs: regs.clone(),
+            return_value: 0,
+            stop_type: SyscallStopType::Enter,
+            extra_context: extra,
+            blocked: false,
+            label: None,
+        };
+
+        // Test that the filter matches the event
+        assert!(open_filter.matcher.matches(&proc, &event));
+
+        // Verify that the action is Block with error code -1
+        match open_filter.outcome.action {
+            FilterAction::Block(error_code) => assert_eq!(error_code, -1),
+            _ => panic!("Expected Block action for open with O_TRUNC"),
+        }
+    }
+
+    #[test]
+    fn test_openat_with_o_trunc_flag_blocked() {
+        use crate::regs::Regs;
+        use crate::syscall_common::EXTRA_FLAGS;
+        use crate::syscall_event::{SyscallEvent, SyscallStopType};
+        use crate::trace_process::TraceProcess;
+        use std::collections::HashMap;
+
+        let filters = create_write_filter();
+        let open_filter = filters
+            .iter()
+            .find(|f| f.matcher.flag_matcher.is_some())
+            .unwrap();
+
+        // Create a mock TraceProcess
+        let proc = TraceProcess::new(nix::unistd::Pid::from_raw(1000));
+
+        // Create a mock SyscallEvent for openat syscall with O_TRUNC flag
+        let mut extra = HashMap::new();
+        extra.insert(EXTRA_FLAGS, "O_TRUNC".to_string());
+
+        let mut regs = Regs::default();
+        if let Some(openat_id) = syscall_id_by_name("openat") {
+            regs.syscall_id = openat_id;
+        }
+
+        let event = SyscallEvent {
+            id: regs.syscall_id,
+            name: "openat".to_string(),
+            set_syscall_id: |_, _, _| Ok(()),
+            pid: 1000,
+            arguments: Default::default(),
+            regs: regs.clone(),
+            return_value: 0,
+            stop_type: SyscallStopType::Enter,
+            extra_context: extra,
+            blocked: false,
+            label: None,
+        };
+
+        // Test that the filter matches the event
+        assert!(open_filter.matcher.matches(&proc, &event));
+
+        // Verify that the action is Block with error code -1
+        match open_filter.outcome.action {
+            FilterAction::Block(error_code) => assert_eq!(error_code, -1),
+            _ => panic!("Expected Block action for openat with O_TRUNC"),
         }
     }
 }

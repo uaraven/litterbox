@@ -41,7 +41,7 @@
     - [x] preadv
     - [x] preadv2
   - write
-    - [ ] open/openat with O_CREAT or O_TRUNC flags
+    - [x] open/openat with O_CREAT or O_TRUNC flags
     - [ ] access 
     - [ ] faccessat/faccessat2
     - [x] write
