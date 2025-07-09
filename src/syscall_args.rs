@@ -28,6 +28,7 @@ pub enum SyscallArgument {
     Ptr(u64),
     String(String),
     Bytes(Vec<u8>),
+    Bits(u64),
     UnixAddress { addr: String },
     IpV4Address { addr: Ipv4Addr, port: u16 },
     IpV6Address { addr: Ipv6Addr, port: u16 },
@@ -54,6 +55,7 @@ impl fmt::Display for SyscallArgument {
                     .replace("\n", "\\n");
                 write!(f, "'{}...'", hex_str)
             }
+            SyscallArgument::Bits(bits) => write!(f, "0b{:b}", bits),
             SyscallArgument::UnixAddress { addr } => write!(f, "{}", addr),
             SyscallArgument::IpV4Address { addr, port } => write!(f, "\"{}:{}\"", addr, port),
             SyscallArgument::IpV6Address { addr, port } => write!(f, "\"[{}]:{}\"", addr, port),

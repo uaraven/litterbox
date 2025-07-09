@@ -14,12 +14,72 @@
         - [x] no color
     - [x] JSONL logging
 - [ ] DNS sniffing
-- [ ] Simple filtering
-  - [ ] Simple file filtering
-    - [ ] Block reads in directories
-    - [ ] Block writes in directories
-  - [ ] Simple network filtering
-    - [ ] Block connections to IP addresses/Hosts
-    - [ ] Block server sockets
-  - [ ] Simple subprocess filtering
-    - [ ] Block spawning processes by name
+- [ ] Simple sandboxing
+  - [ ] Block all writes except designated directories
+  - [ ] Block all outgoing connections except designated IP addresses/Hosts
+  - [ ] Block server sockets
+  - [ ] Block spawning processes except designated apps by path
+  - [ ] Block shutdown and reboot
+
+
+
+ - Handle more syscalls:
+  - [ ] dup/dup2/dup3 - map path to new fd
+  - [ ] fcntl with F_DUPFD/F_DUPFD_CLOEXEC flags
+  - [ ] chdir - log
+  - [ ] fchdir - log
+  - [ ] statfs - log
+  - [ ] fstatfs - log
+  - read
+    - [ ] openat
+    - [ ] name_to_handle_at
+    - [ ] open_by_handle_at
+    - [x] read
+    - [x] readv
+    - [x] pread
+    - [x] pread64
+    - [x] preadv
+    - [x] preadv2
+  - write
+    - [ ] open/openat with O_CREAT or O_TRUNC flags
+    - [ ] access 
+    - [ ] faccessat/faccessat2
+    - [x] write
+    - [x] writev
+    - [x] pwrite
+    - [x] pwrite64
+    - [x] pwritev
+    - [x] pwritev2
+    - [ ] mmap with PROT_WRITE protection flag
+    - [ ] sendfile
+    - [ ] chmod
+    - [ ] fchmod
+    - [ ] fchmodat
+    - [ ] chown/lchown
+    - [ ] fchown
+    - [ ] fchownat
+    - [ ] rename
+    - [ ] renameat
+    - [ ] renameat2
+    - [ ] mkdir
+    - [ ] mkdirat
+    - [ ] rmdir
+    - [ ] link
+    - [ ] linkat
+    - [ ] unlinkat
+    - [ ] symlink
+    - [ ] symlinkat
+    - [ ] mknod
+    - [ ] mknodat
+    - [ ] chroot - log
+    - [ ] name_to_handle_at
+    - [ ] open_by_handle_at
+  - network
+    - [ ] connect
+    - [ ] listen 
+  - process
+    - [ ] execve
+    - [ ] execveat
+  - system
+    - [ ] shutdown
+    - [ ] reboot

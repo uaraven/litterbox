@@ -16,7 +16,7 @@
  *
  */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::filters::syscall_filter::SyscallFilter;
 
@@ -47,4 +47,12 @@ pub(crate) fn syscall_id_by_name(name: &str) -> Option<u64> {
         .iter()
         .position(|&n| n == name)
         .map(|idx| (idx + syscall_names::SYS_CALL_BASE_INDEX) as u64)
+}
+
+pub(crate) fn syscall_ids_by_names(names: Vec<&str>) -> HashSet<i64> {
+    names
+        .into_iter()
+        .filter_map(|name| syscall_id_by_name(name))
+        .map(|id| id as i64)
+        .collect()
 }

@@ -18,10 +18,31 @@
 use crate::{
     fd_utils::is_fdcwd,
     regs::Regs,
-    syscall_common::{EXTRA_CWD, EXTRA_DIRFD},
+    syscall_args::SyscallArgument,
+    syscall_common::{EXTRA_CWD, EXTRA_DIRFD, EXTRA_PATHNAME, read_cstring},
     syscall_event::ExtraData,
     trace_process::TraceProcess,
 };
+
+pub(crate) fn read_pathname(
+    proc: &mut TraceProcess,
+    regs: &Regs,
+    pathname_reg: usize,
+    extra: &mut ExtraData,
+) -> (String, SyscallArgument) {
+    let (pathname, pathname_arg) =
+        match read_cstring(proc.get_pid(), regs.regs[pathname_reg] as usize) {
+            Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
+            Err(_) => (
+                "".to_string(),
+                SyscallArgument::Ptr(regs.regs[pathname_reg]),
+            ),
+        };
+    if !pathname.is_empty() {
+        extra.insert(EXTRA_PATHNAME, pathname.clone());
+    }
+    (pathname.clone(), pathname_arg)
+}
 
 pub(crate) fn add_dirfd_extra(proc: &mut TraceProcess, dirfd: i64, extra: &mut ExtraData) {
     if is_fdcwd(dirfd as i32) {
@@ -31,12 +52,8 @@ pub(crate) fn add_dirfd_extra(proc: &mut TraceProcess, dirfd: i64, extra: &mut E
     }
 }
 
-pub(crate) fn add_fd_filepath(
-    proc: &mut TraceProcess,
-    regs: &Regs,
-    is_entry: bool,
-    extras: &mut ExtraData,
-) -> u64 {
+pub(crate) fn add_fd_filepath(proc: &mut TraceProcess, regs: &Regs, extras: &mut ExtraData) -> u64 {
+    let is_entry = proc.is_entry(regs.syscall_id);
     let fd = match is_entry {
         true => regs.regs[0],
         false => proc

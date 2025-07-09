@@ -18,19 +18,7 @@
 
 use clap::{Parser, ValueEnum};
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-pub enum Profile {
-    /// Allow all syscalls and log them
-    Permissive,
-    /// Block potentially dangerous syscalls
-    Restrictive,
-    /// Allow some syscalls
-    Default,
-    /// Custom syscall filter profile
-    Custom,
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum LogFormat {
     /// Output logs in a plain text format
     Text,
@@ -38,44 +26,48 @@ pub enum LogFormat {
     Jsonl,
 }
 
-#[derive(Parser)]
-#[command(version, about, long_about = None)]
-pub struct Cli {
-    /// Use syscall filter profile
+#[derive(Debug, Clone, Parser)]
+#[command(author, version, about)]
+pub(crate) struct Args {
     #[arg(
-        name = "profile",
-        short = 'p',
-        long = "profile",
-        default_value = "default",
-        required = false,
-        value_enum
+        long = "sandbox",
+        help = "Run in sandbox mode, blocking most destructive file operations, network access and spawning processes",
+        conflicts_with = "filter",
+        default_value_t = true
     )]
-    pub profile: Profile,
-
+    pub sandbox: bool,
     #[arg(
-        required = false,
+        long = "allow-write",
+        help = "List of directories to allow write access to in sandbox mode"
+    )]
+    pub allow_write: Vec<String>,
+    #[arg(
+        long = "allow-connect",
+        help = "List of IP addresses (or masks) to allow connections to and from in sandbox mode"
+    )]
+    pub allow_connect: Vec<String>,
+    #[arg(
+        long = "allow-spawn",
+        help = "List of programs to allow spawning in sandbox mode"
+    )]
+    pub allow_spawn: Vec<String>,
+    #[arg(
         long = "filter",
-        short = 'f',
-        help = "Path to the filter configuration file."
+        help = "Run in filter mode, allowing only syscalls specified in the filter file",
+        conflicts_with = "sandbox",
+        default_value_t = false
     )]
-    pub filter_config: Option<String>,
-
+    pub filter: bool,
+    #[arg(long = "filter-file", help = "JSON file containing filter definition")]
+    pub filter_file: Option<String>,
+    #[arg(short='l', long="log-format", help= "Format of the logs, either 'text' or 'jsonl'", value_enum, default_value_t = LogFormat::Text)]
+    pub log_format: LogFormat,
     #[arg(
-        long = "output",
         short = 'o',
-        required = false,
-        help = "Output file for syscall logs. If not specified, logs will be printed to stdout."
+        long = "output",
+        help = "Output file to write logs to, defaults to stdout"
     )]
     pub output: Option<String>,
-
-    #[arg(
-        long = "log-format",
-        required = false,
-        default_value = "text",
-        help = "Format of the logs. Defaults to text format."
-    )]
-    pub log_format: Option<LogFormat>,
-
-    #[arg(required = true, num_args = 1..)]
-    pub prog: Vec<String>,
+    #[arg(required=true, num_args=1.., help="Program to run in litterbox and its arguments")]
+    pub program: Vec<String>,
 }
