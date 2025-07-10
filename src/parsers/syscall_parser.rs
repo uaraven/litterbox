@@ -42,6 +42,7 @@ use crate::parsers::syscall_parsers_file::file_ops::{
     parse_fchmod, parse_fchmodat, parse_fchown, parse_fchownat, parse_fstat, parse_fstatat,
     parse_renameat, parse_renameat2,
 };
+use crate::parsers::syscall_parsers_file::links::{parse_linkat, parse_symlinkat};
 use std::ffi::c_long;
 use syscall_numbers::*;
 
@@ -79,6 +80,8 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         aarch64::SYS_renameat => parse_renameat,
         aarch64::SYS_renameat2 => parse_renameat2,
         aarch64::SYS_unlinkat => parse_unlinkat,
+        aarch64::SYS_linkat => parse_linkat,
+        aarch64::SYS_symlinkat => parse_symlinkat,
         aarch64::SYS_clone => parse_clone,
         aarch64::SYS_clone3 => parse_clone3,
         aarch64::SYS_execve => parse_execve,
@@ -97,6 +100,7 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
     use crate::parsers::syscall_parsers_file::delete::parse_unlink_rmdir;
     use crate::parsers::syscall_parsers_file::dir::parse_mkdir;
     use crate::parsers::syscall_parsers_file::file_ops::{parse_chown, parse_rename, parse_stat};
+    use crate::parsers::syscall_parsers_file::links::{parse_link, parse_symlink};
     use crate::parsers::syscall_parsers_file::open_close::{parse_access, parse_creat, parse_open};
 
     let cid: c_long = id as i64;
@@ -139,6 +143,10 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         x86_64::SYS_newfstatat => parse_fstatat,
         x86_64::SYS_unlink | x86_64::SYS_rmdir => parse_unlink_rmdir,
         x86_64::SYS_unlinkat => parse_unlinkat,
+        x86_64::SYS_link => parse_link,
+        x86_64::SYS_linkat => parse_linkat,
+        x86_64::SYS_symlink => parse_symlink,
+        x86_64::SYS_symlinkat => parse_symlinkat,
         x86_64::SYS_clone => parse_clone,
         x86_64::SYS_clone3 => parse_clone3,
         x86_64::SYS_execve => parse_execve,

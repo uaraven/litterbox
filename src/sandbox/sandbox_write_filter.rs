@@ -33,6 +33,8 @@ use std::collections::{HashMap, HashSet};
 /// - Extended attributes modification (setxattr, fsetxattr, etc.)
 /// - Other filesystem modification syscalls
 pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
+    // TODO: add list of allowed paths
+    // TODO: For allowed paths configure the same filters, but with path matcher and allow
     // Comprehensive list of filesystem-changing syscalls
     let write_syscalls = vec![
         // Direct write operations

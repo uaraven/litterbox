@@ -28,6 +28,7 @@ use crate::trace_process::TraceProcess;
 
 pub(crate) const EXTRA_PATHNAME: &str = "pathname";
 pub(crate) const EXTRA_NEW_PATHNAME: &str = "new_pathname";
+pub(crate) const EXTRA_TARGET_PATHNAME: &str = "target_pathname";
 pub(crate) const EXTRA_ADDR: &str = "addr";
 pub(crate) const EXTRA_FLAGS: &str = "flags";
 pub(crate) const EXTRA_CWD: &str = "cwd";

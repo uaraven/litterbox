@@ -71,12 +71,12 @@ Following syscalls are not parsed now. Sandbox mode blocks these syscalls right 
     - [x] mkdir
     - [x] mkdirat
     - [x] rmdir
-    - [ ] link
-    - [ ] linkat
+    - [x] link
+    - [x] linkat
     - [x] unlink
     - [x] unlinkat
-    - [ ] symlink
-    - [ ] symlinkat
+    - [x] symlink
+    - [x] symlinkat
     - [ ] mknod
     - [ ] mknodat
     - [ ] chroot - log

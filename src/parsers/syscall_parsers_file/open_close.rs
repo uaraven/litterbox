@@ -15,17 +15,16 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
-use nix::fcntl::OFlag;
-use nix::libc::{open_how};
-use std::collections::HashMap;
-use nix::libc;
 use crate::flags::open_flags_to_str;
 use crate::parsers::syscall_parsers_file::common::{add_dirfd_extra, read_pathname};
 use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::{read_buffer_as_type, EXTRA_FLAGS};
+use crate::syscall_common::{EXTRA_FLAGS, read_buffer_as_type};
 use crate::syscall_event::get_abs_filepath_from_extra;
 use crate::trace_process::TraceProcess;
 use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
+use nix::fcntl::OFlag;
+use nix::libc::open_how;
+use std::collections::HashMap;
 
 #[cfg(target_arch = "x86_64")]
 // int creat(const char *pathname, mode_t mode);
@@ -47,6 +46,7 @@ pub(crate) fn parse_creat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
 #[cfg(target_arch = "x86_64")]
 //  int open(const char *pathname, int flags, ... /* mode_t mode */ );
 pub(crate) fn parse_open(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    use nix::libc;
     let flags = regs.regs[1];
     let mut extras: ExtraData = HashMap::new();
     extras.insert(EXTRA_FLAGS, open_flags_to_str(flags));
@@ -76,7 +76,9 @@ pub(crate) fn parse_openat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent 
 
     let (_, pathname_arg) = read_pathname(proc, &regs, 1, &mut extras);
 
-    if let Some(path) = get_abs_filepath_from_extra(&extras) && libc_flags.contains(OFlag::O_CREAT)  {
+    if let Some(path) = get_abs_filepath_from_extra(&extras)
+        && libc_flags.contains(OFlag::O_CREAT)
+    {
         proc.add_created_path(path);
     }
 
@@ -107,7 +109,9 @@ pub(crate) fn parse_openat2(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent
     let libc_flags = OFlag::from_bits(open_flags as i32).unwrap_or(OFlag::empty());
 
     let (_, pathname_arg) = read_pathname(proc, &regs, 1, &mut extras);
-    if let Some(path) = get_abs_filepath_from_extra(&extras) && libc_flags.contains(OFlag::O_CREAT) {
+    if let Some(path) = get_abs_filepath_from_extra(&extras)
+        && libc_flags.contains(OFlag::O_CREAT)
+    {
         proc.add_created_path(path);
     }
 
@@ -141,15 +145,11 @@ pub(crate) fn parse_access(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent 
 
     SyscallEvent::new_with_extras(
         proc,
-        Vec::from([
-            pathname_arg,
-            SyscallArgument::Int(regs.regs[1]),
-        ]),
+        Vec::from([pathname_arg, SyscallArgument::Int(regs.regs[1])]),
         &regs,
         extras,
     )
 }
-
 
 pub(crate) fn parse_faccessat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
