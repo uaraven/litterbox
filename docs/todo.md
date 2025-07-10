@@ -79,14 +79,11 @@ Following syscalls are not parsed now. Sandbox mode blocks these syscalls right 
     - [ ] mknod
     - [ ] mknodat
     - [ ] chroot - log
-    - [ ] name_to_handle_at
-    - [ ] open_by_handle_at
   - network
     - [x] connect
     - [x] listen 
   - process
-    - [ ] execve
-    - [ ] execveat
+    - [x] execve
+    - [x] execveat
   - system
-    - [ ] shutdown
-    - [ ] reboot
+    - [x] reboot

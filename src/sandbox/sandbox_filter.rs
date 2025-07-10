@@ -22,7 +22,9 @@ use crate::filter_loader::FilterError;
 use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher};
 use crate::loggers::syscall_logger::SyscallLogger;
 use crate::sandbox::sandbox_network::create_network_filter;
+use crate::sandbox::sandbox_process::create_process_filter;
 use crate::sandbox::sandbox_read_filter::create_reader_filter;
+use crate::sandbox::sandbox_system::create_system_filter;
 use crate::sandbox::sandbox_write_filter::create_write_filter;
 
 fn default_filter() -> SyscallFilter {
@@ -56,6 +58,8 @@ pub(crate) fn create_sandbox_filters(
     let mut filters = create_write_filter();
     filters.push(create_reader_filter());
     filters.extend(create_network_filter(connectable_addresses));
+    filters.push(create_process_filter(allow_spawn));
+    filters.push(create_system_filter());
     filters.push(default_filter());
 
     Ok(FilteringLogger::new(filters, None, Some(logger)))

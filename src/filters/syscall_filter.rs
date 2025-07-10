@@ -36,7 +36,7 @@ use crate::{
 
 const MAX_ARGS: u8 = 6;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum FilterAction {
     Block(i32),
     Allow,
