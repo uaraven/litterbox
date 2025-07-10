@@ -17,7 +17,7 @@
  */
 
 use crate::parsers::syscall_parsers_file::delete::parse_unlinkat;
-use crate::parsers::syscall_parsers_file::open_close::{parse_access, parse_close, parse_faccessat, parse_openat, parse_openat2};
+use crate::parsers::syscall_parsers_file::open_close::{parse_close, parse_faccessat, parse_openat, parse_openat2};
 use crate::parsers::syscall_parsers_file::rw::{
     parse_preadv2_pwritev2, parse_preadv_pwritev,
     parse_readv_writev, parse_read_write,parse_pread64_pwrite64,
@@ -36,22 +36,15 @@ use crate::trace_process::TraceProcess;
 #[cfg(target_arch = "x86_64")]
 use crate::parsers::syscall_parsers_file::delete::parse_unlink_rmdir;
 #[cfg(target_arch = "x86_64")]
-use crate::parsers::syscall_parsers_file::open_close::{parse_creat, parse_open};
-// #[cfg(target_arch = "x86_64")]
-// use crate::syscall_parsers_socket::parse_recv;
+use crate::parsers::syscall_parsers_file::open_close::{parse_creat, parse_open, parse_access, parse_stat};
 
-use crate::parsers::syscall_parsers_file::file_ops::{parse_chdir, parse_fchdir, parse_fchmod, parse_fchmodat, parse_fstat, parse_fstatat, parse_stat};
+use crate::parsers::syscall_parsers_file::file_ops::{parse_chdir, parse_fchdir, parse_fchmod, parse_fchmodat, parse_fstat, parse_fstatat};
 use std::ffi::c_long;
 use syscall_numbers::*;
 
 // const E_NO_SYS: u64 = (-(38i64)) as u64;
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
-    use crate::parsers::syscall_parsers_file::{
-        file_ops::{parse_fstat, parse_fstatat},
-        rw::parse_pread64_pwrite64,
-    };
-
     let cid: c_long = id as i64;
     if cid < 0 {
         return parse_default;
@@ -70,7 +63,6 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         aarch64::SYS_preadv => parse_preadv_pwritev,
         aarch64::SYS_preadv2 => parse_preadv2_pwritev2,
         aarch64::SYS_pread64 => parse_pread64_pwrite64,
-        aarch64::SYS_access => parse_access,
         aarch64::SYS_faccessat | aarch64::SYS_faccessat2 => parse_faccessat,
         aarch64::SYS_fstat => parse_fstat,
         aarch64::SYS_newfstatat => parse_fstatat,

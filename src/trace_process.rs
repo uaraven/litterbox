@@ -22,7 +22,8 @@ use std::{
 };
 
 use nix::{
-    libc::{self, user_regs_struct},
+    errno::Errno,
+    libc::{self, user_regs_struct, c_void},
     unistd::Pid,
 };
 
@@ -76,6 +77,7 @@ pub fn set_syscall_id(
     _arch_regs: user_regs_struct,
     new_syscall_id: u64,
 ) -> Result<(), nix::Error> {
+
     const PTRACE_SETREGSET: usize = 0x4205;
     const NT_ARM_SYSTEM_CALL: usize = 0x404;
 

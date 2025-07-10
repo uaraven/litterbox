@@ -16,7 +16,7 @@
  *
  */
 use nix::fcntl::OFlag;
-use nix::libc::{self, open_how};
+use nix::libc::{open_how};
 use std::collections::HashMap;
 
 use crate::flags::open_flags_to_str;
@@ -27,6 +27,7 @@ use crate::syscall_event::get_abs_filepath_from_extra;
 use crate::trace_process::TraceProcess;
 use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
 
+#[cfg(target_arch = "x86_64")]
 // int creat(const char *pathname, mode_t mode);
 pub(crate) fn parse_creat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mode = regs.regs[1];
@@ -43,6 +44,7 @@ pub(crate) fn parse_creat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     )
 }
 
+#[cfg(target_arch = "x86_64")]
 //  int open(const char *pathname, int flags, ... /* mode_t mode */ );
 pub(crate) fn parse_open(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let flags = regs.regs[1];
@@ -131,6 +133,7 @@ pub(crate) fn parse_close(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     SyscallEvent::new(proc, Vec::from([SyscallArgument::Fd(regs.regs[0])]), &regs)
 }
 
+#[cfg(target_arch = "x86_64")]
 pub(crate) fn parse_access(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
 

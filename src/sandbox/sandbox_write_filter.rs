@@ -223,7 +223,7 @@ mod tests {
         extra.insert(EXTRA_FLAGS, "O_TRUNC".to_string());
 
         let mut regs = Regs::default();
-        if let Some(open_id) = syscall_id_by_name("open") {
+        if let Some(open_id) = syscall_id_by_name("openat") {
             regs.syscall_id = open_id;
         }
 

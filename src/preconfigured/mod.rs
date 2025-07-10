@@ -17,5 +17,3 @@
  */
 
 pub mod default;
-pub mod permissive;
-pub mod restrictive;

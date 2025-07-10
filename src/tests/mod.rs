@@ -28,10 +28,6 @@ pub mod filter_deserialization_test;
 pub mod filter_listeners_test;
 #[cfg(test)]
 pub mod path_matcher_test;
-#[cfg(test)]
-pub mod permission_filter_test;
-#[cfg(test)]
-pub mod restrictive_filter_test;
 
 #[cfg(test)]
 pub mod flags_matcher_test;
