@@ -65,15 +65,16 @@ Following syscalls are not parsed now. Sandbox mode blocks these syscalls right 
     - [x] chown/lchown
     - [x] fchown
     - [x] fchownat
-    - [ ] rename
-    - [ ] renameat
-    - [ ] renameat2
-    - [ ] mkdir
-    - [ ] mkdirat
-    - [ ] rmdir
+    - [x] rename
+    - [x] renameat
+    - [x] renameat2
+    - [x] mkdir
+    - [x] mkdirat
+    - [x] rmdir
     - [ ] link
     - [ ] linkat
-    - [ ] unlinkat
+    - [x] unlink
+    - [x] unlinkat
     - [ ] symlink
     - [ ] symlinkat
     - [ ] mknod

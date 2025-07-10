@@ -20,7 +20,7 @@ use std::collections::HashMap;
 
 use crate::parsers::syscall_parsers_file::common::add_fd_filepath;
 use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::{read_buffer, MAX_BUFFER_SIZE};
+use crate::syscall_common::{MAX_BUFFER_SIZE, read_buffer};
 use crate::trace_process::TraceProcess;
 use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
 
@@ -132,7 +132,3 @@ pub(crate) fn parse_pread64_pwrite64(proc: &mut TraceProcess, regs: Regs) -> Sys
         extras,
     )
 }
-
-// int ioctl(int fd, unsigned long op, ...);  /* glibc, BSD */
-// int ioctl(int fd, int op, ...);            /* musl, other UNIX */
-// ssize_t copy_file_range(int fd_in, off_t *_Nullable off_in, int fd_out, off_t *_Nullable off_out, size_t size, unsigned int flags);

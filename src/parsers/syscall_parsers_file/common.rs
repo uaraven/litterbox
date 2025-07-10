@@ -19,7 +19,7 @@ use crate::parsers::syscall_parsers_file::fd_utils::is_fdcwd;
 use crate::{
     regs::Regs,
     syscall_args::SyscallArgument,
-    syscall_common::{read_cstring, EXTRA_CWD, EXTRA_DIRFD, EXTRA_PATHNAME},
+    syscall_common::{EXTRA_CWD, EXTRA_DIRFD, EXTRA_PATHNAME, read_cstring},
     syscall_event::ExtraData,
     trace_process::TraceProcess,
 };
@@ -33,6 +33,19 @@ pub(crate) fn read_pathname(
     pathname_param_no: usize,
     extra: &mut ExtraData,
 ) -> (String, SyscallArgument) {
+    read_pathname_to_key(proc, regs, pathname_param_no, EXTRA_PATHNAME, extra)
+}
+
+/// Reads pathname from a syscall parameter. If c-string was successfully read, stores
+/// the string in the extras with the provided key
+/// Returns a tuple containing pathname as a string and as a [SyscallArgument]
+pub(crate) fn read_pathname_to_key(
+    proc: &mut TraceProcess,
+    regs: &Regs,
+    pathname_param_no: usize,
+    key: &'static str,
+    extra: &mut ExtraData,
+) -> (String, SyscallArgument) {
     let (pathname, pathname_arg) =
         match read_cstring(proc.get_pid(), regs.regs[pathname_param_no] as usize) {
             Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
@@ -42,7 +55,7 @@ pub(crate) fn read_pathname(
             ),
         };
     if !pathname.is_empty() {
-        extra.insert(EXTRA_PATHNAME, pathname.clone());
+        extra.insert(key, pathname.clone());
     }
     (pathname.clone(), pathname_arg)
 }

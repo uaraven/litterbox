@@ -21,8 +21,12 @@
 
 use std::collections::HashMap;
 
-use crate::parsers::syscall_parsers_file::common::{add_dirfd_extra, add_fd_filepath, read_pathname};
-use crate::syscall_common::read_cstring;
+use nix::libc;
+
+use crate::parsers::syscall_parsers_file::common::{
+    add_dirfd_extra, add_fd_filepath, read_pathname, read_pathname_to_key,
+};
+use crate::syscall_common::{EXTRA_NEW_PATHNAME, read_cstring};
 use crate::{
     regs::Regs,
     syscall_args::SyscallArgument,
@@ -91,7 +95,12 @@ pub(crate) fn parse_chmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     if !is_entry {
         proc.set_cwd(pathname.clone());
     }
-    SyscallEvent::new_with_extras(proc, Vec::from([pathname_arg, SyscallArgument::FileMode(regs.regs[1])]), &regs, Default::default())
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([pathname_arg, SyscallArgument::FileMode(regs.regs[1])]),
+        &regs,
+        Default::default(),
+    )
 }
 
 // int fchmod(int fd, mode_t mode);
@@ -102,7 +111,10 @@ pub(crate) fn parse_fchmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent 
     let fd = add_fd_filepath(proc, &regs, &mut extras);
     SyscallEvent::new_with_extras(
         proc,
-        Vec::from([SyscallArgument::Fd(fd), SyscallArgument::FileMode(regs.regs[1])]),
+        Vec::from([
+            SyscallArgument::Fd(fd),
+            SyscallArgument::FileMode(regs.regs[1]),
+        ]),
         &regs,
         extras,
     )
@@ -128,85 +140,129 @@ pub(crate) fn parse_fchmodat(proc: &mut TraceProcess, regs: Regs) -> SyscallEven
     )
 }
 
-// int chdir(const char *path);
-pub(crate) fn parse_chdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let is_entry = proc.is_entry(regs.syscall_id);
-    let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[1] as usize) {
-        Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
-        Err(_) => ("".to_string(), SyscallArgument::Ptr(regs.regs[1])),
-    };
-    if !is_entry && regs.return_value == 0 {
-        proc.set_cwd(pathname.clone());
-    }
-    SyscallEvent::new_with_extras(proc, Vec::from([pathname_arg]), &regs, Default::default())
-}
-
-// int fchdir(int fd);
-pub(crate) fn parse_fchdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let is_entry = proc.is_entry(regs.syscall_id);
-    let fd = regs.regs[0] as i64;
-    let mut extras = HashMap::<&str, String>::new();
-    if let Some(fd_data) = proc.get_fd(fd) {
-        if !is_entry && fd > 0 && regs.return_value == 0 {
-            proc.set_cwd(fd_data.value.clone());
-        }
-    }
-    if let Some(fd_data) = proc.get_fd(fd) {
-        extras.insert(fd_data.name, fd_data.value.clone());
-    }
-    SyscallEvent::new_with_extras(
-        proc,
-        Vec::from([SyscallArgument::DirFd(regs.regs[0])]),
-        &regs,
-        extras,
-    )
-}
-
-
 #[cfg(target_arch = "x86_64")]
 // int chown(const char *pathname, uid_t owner, gid_t group);
-// int lchown(const char *pathname, uid_t owner, gid_t group);      
+// int lchown(const char *pathname, uid_t owner, gid_t group);
 pub(crate) fn parse_chown(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras = HashMap::<&str, String>::new();
     let (_, pathname_arg) = read_pathname(proc, &regs, 0, &mut extras);
-    SyscallEvent::new_with_extras(proc, 
+    SyscallEvent::new_with_extras(
+        proc,
         Vec::from([
-            pathname_arg, 
-            SyscallArgument::Int(regs.regs[1]), 
-            SyscallArgument::Int(regs.regs[2])]), 
-        &regs, 
-        extras)
+            pathname_arg,
+            SyscallArgument::Int(regs.regs[1]),
+            SyscallArgument::Int(regs.regs[2]),
+        ]),
+        &regs,
+        extras,
+    )
 }
 
 // int fchown(int fd, uid_t owner, gid_t group);
 pub(crate) fn parse_fchown(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras = HashMap::<&str, String>::new();
     let fd = add_fd_filepath(proc, &regs, &mut extras);
-    SyscallEvent::new_with_extras(proc, 
+    SyscallEvent::new_with_extras(
+        proc,
         Vec::from([
-            SyscallArgument::Fd(fd), 
-            SyscallArgument::Int(regs.regs[1]), 
-            SyscallArgument::Int(regs.regs[2])]), 
-        &regs, 
-        extras)
+            SyscallArgument::Fd(fd),
+            SyscallArgument::Int(regs.regs[1]),
+            SyscallArgument::Int(regs.regs[2]),
+        ]),
+        &regs,
+        extras,
+    )
 }
 
 // int fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flags);
 pub(crate) fn parse_fchownat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras = HashMap::<&str, String>::new();
     let dirfd = regs.regs[0];
-    add_dirfd_extra(proc, dirfd as i64,  &mut extras);
+    add_dirfd_extra(proc, dirfd as i64, &mut extras);
 
     let (_, pathname_arg) = read_pathname(proc, &regs, 1, &mut extras);
 
     SyscallEvent::new_with_extras(
-        proc, 
+        proc,
         Vec::from([
-            SyscallArgument::DirFd(dirfd), 
+            SyscallArgument::DirFd(dirfd),
             pathname_arg,
-            SyscallArgument::Int(regs.regs[1]), 
-            SyscallArgument::Int(regs.regs[2]), 
-            SyscallArgument::Int(regs.regs[3])]), 
-        &regs, 
-        extras)
+            SyscallArgument::Int(regs.regs[1]),
+            SyscallArgument::Int(regs.regs[2]),
+            SyscallArgument::Int(regs.regs[3]),
+        ]),
+        &regs,
+        extras,
+    )
+}
+
+#[cfg(target_arch = "x86_64")]
+// int rename(const char *oldpath, const char *newpath);
+pub(crate) fn parse_rename(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let mut extras: ExtraData = HashMap::new();
+    let (_, old_pathname_arg) = read_pathname(proc, &regs, 0, &mut extras);
+    let (_, new_pathname_arg) =
+        read_pathname_to_key(proc, &regs, 1, EXTRA_NEW_PATHNAME, &mut extras);
+
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([old_pathname_arg, new_pathname_arg]),
+        &regs,
+        extras,
+    )
+}
+
+// int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
+pub(crate) fn parse_renameat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let mut extras: ExtraData = HashMap::new();
+    let old_dirfd = regs.regs[0];
+    add_dirfd_extra(proc, old_dirfd as i64, &mut extras);
+
+    let new_dirfd = regs.regs[1];
+    add_dirfd_extra(proc, new_dirfd as i64, &mut extras);
+
+    let (_, old_pathname_arg) = read_pathname(proc, &regs, 2, &mut extras);
+    let (_, new_pathname_arg) =
+        read_pathname_to_key(proc, &regs, 3, EXTRA_NEW_PATHNAME, &mut extras);
+
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([
+            SyscallArgument::DirFd(old_dirfd),
+            SyscallArgument::DirFd(new_dirfd),
+            old_pathname_arg,
+            new_pathname_arg,
+        ]),
+        &regs,
+        extras,
+    )
+}
+
+// int renameat2(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags);
+pub(crate) fn parse_renameat2(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let mut extras: ExtraData = HashMap::new();
+    let old_dirfd = regs.regs[0];
+    add_dirfd_extra(proc, old_dirfd as i64, &mut extras);
+
+    let new_dirfd = regs.regs[1];
+    add_dirfd_extra(proc, new_dirfd as i64, &mut extras);
+
+    let (_, old_pathname_arg) = read_pathname(proc, &regs, 2, &mut extras);
+    let (_, new_pathname_arg) =
+        read_pathname_to_key(proc, &regs, 3, EXTRA_NEW_PATHNAME, &mut extras);
+
+    let flags = regs.regs[4];
+
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([
+            SyscallArgument::DirFd(old_dirfd),
+            SyscallArgument::DirFd(new_dirfd),
+            old_pathname_arg,
+            new_pathname_arg,
+            SyscallArgument::RenameFlags(flags),
+        ]),
+        &regs,
+        extras,
+    )
 }
