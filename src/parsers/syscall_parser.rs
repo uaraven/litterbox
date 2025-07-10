@@ -37,14 +37,18 @@ use crate::trace_process::TraceProcess;
 use crate::parsers::syscall_parsers_file::delete::parse_unlink_rmdir;
 #[cfg(target_arch = "x86_64")]
 use crate::parsers::syscall_parsers_file::open_close::{parse_creat, parse_open, parse_access, parse_stat};
+#[cfg(target_arch = "x86_64")]
+use crate::parsers::syscall_parsers_file::file_ops::{parse_chown};
 
-use crate::parsers::syscall_parsers_file::file_ops::{parse_chdir, parse_fchdir, parse_fchmod, parse_fchmodat, parse_fstat, parse_fstatat};
+use crate::parsers::syscall_parsers_file::file_ops::{parse_chdir, parse_fchdir,
+     parse_fchmod, parse_fchmodat, parse_fstat, parse_fstatat, parse_fchown, parse_fchownat};
 use std::ffi::c_long;
 use syscall_numbers::*;
 
 // const E_NO_SYS: u64 = (-(38i64)) as u64;
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
+
     let cid: c_long = id as i64;
     if cid < 0 {
         return parse_default;
@@ -68,6 +72,8 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         aarch64::SYS_newfstatat => parse_fstatat,
         aarch64::SYS_fchmod => parse_fchmod,
         aarch64::SYS_fchmodat => parse_fchmodat,
+        aarch64::SYS_fchown => parse_fchown,
+        aarch64::SYS_fchownat => parse_fchownat,
         aarch64::SYS_chdir => parse_chdir,
         aarch64::SYS_fchdir => parse_fchdir,
         aarch64::SYS_unlinkat => parse_unlinkat,
@@ -113,6 +119,9 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         x86_64::SYS_fchmodat => parse_fchmodat,
         x86_64::SYS_chdir => parse_chdir,
         x86_64::SYS_fchdir => parse_fchdir,
+        x86_64::SYS_chown | x86_64::SYS_lchown => parse_chown,
+        x86_64::SYS_fchown => parse_fchown,
+        x86_64::SYS_fchownat => parse_fchownat,
         x86_64::SYS_stat | x86_64::SYS_lstat => parse_stat,
         x86_64::SYS_fstat => parse_fstat,
         x86_64::SYS_newfstatat => parse_fstatat,

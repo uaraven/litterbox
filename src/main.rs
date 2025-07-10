@@ -21,7 +21,6 @@ mod filter_loader;
 mod filters;
 mod flags;
 mod loggers;
-mod preconfigured;
 mod regs;
 mod sandbox;
 mod strace;

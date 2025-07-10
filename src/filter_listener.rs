@@ -15,16 +15,15 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use crate::filters::syscall_filter::SyscallMatcher;
+use crate::filters::syscall_filter::{FilterOutcome, SyscallMatcher};
 use crate::{
     filters::{
         syscall_filter::{FilterAction, SyscallFilter},
         utils::group_filters_by_syscall,
     },
     loggers::syscall_logger::SyscallLogger,
-    preconfigured::default::default_filters,
     syscall_event::{SyscallEvent, SyscallEventListener},
     trace_process::TraceProcess,
     TextLogger,
@@ -135,5 +134,30 @@ impl SyscallEventListener for FilteringLogger {
             }
         }
         Some(event.clone())
+    }
+}
+
+
+/// default_filters returns a default filtering logger.
+/// It allows all syscalls and logs them
+pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger {
+    FilteringLogger {
+        primed: true,
+        trigger_event: None,
+        filters: HashMap::default(),
+        default_filters: vec![SyscallFilter {
+            matcher: SyscallMatcher {
+                syscall: HashSet::new(),
+                args: Default::default(),
+                context_matcher: None,
+                flag_matcher: None,
+            },
+            outcome: FilterOutcome {
+                action: FilterAction::Allow,
+                log: true,
+                tag: None,
+            },
+        }],
+        logger: Some(logger),
     }
 }

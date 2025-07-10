@@ -161,3 +161,52 @@ pub(crate) fn parse_fchdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent 
         extras,
     )
 }
+
+
+#[cfg(target_arch = "x86_64")]
+// int chown(const char *pathname, uid_t owner, gid_t group);
+// int lchown(const char *pathname, uid_t owner, gid_t group);      
+pub(crate) fn parse_chown(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let mut extras = HashMap::<&str, String>::new();
+    let (_, pathname_arg) = read_pathname(proc, &regs, 0, &mut extras);
+    SyscallEvent::new_with_extras(proc, 
+        Vec::from([
+            pathname_arg, 
+            SyscallArgument::Int(regs.regs[1]), 
+            SyscallArgument::Int(regs.regs[2])]), 
+        &regs, 
+        extras)
+}
+
+// int fchown(int fd, uid_t owner, gid_t group);
+pub(crate) fn parse_fchown(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let mut extras = HashMap::<&str, String>::new();
+    let fd = add_fd_filepath(proc, &regs, &mut extras);
+    SyscallEvent::new_with_extras(proc, 
+        Vec::from([
+            SyscallArgument::Fd(fd), 
+            SyscallArgument::Int(regs.regs[1]), 
+            SyscallArgument::Int(regs.regs[2])]), 
+        &regs, 
+        extras)
+}
+
+// int fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flags);
+pub(crate) fn parse_fchownat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let mut extras = HashMap::<&str, String>::new();
+    let dirfd = regs.regs[0];
+    add_dirfd_extra(proc, dirfd as i64,  &mut extras);
+
+    let (_, pathname_arg) = read_pathname(proc, &regs, 1, &mut extras);
+
+    SyscallEvent::new_with_extras(
+        proc, 
+        Vec::from([
+            SyscallArgument::DirFd(dirfd), 
+            pathname_arg,
+            SyscallArgument::Int(regs.regs[1]), 
+            SyscallArgument::Int(regs.regs[2]), 
+            SyscallArgument::Int(regs.regs[3])]), 
+        &regs, 
+        extras)
+}

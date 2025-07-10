@@ -62,9 +62,9 @@ Following syscalls are not parsed now. Sandbox mode blocks these syscalls right 
     - [x] fchmodat
     - [x] chdir
     - [x] fchdir
-    - [ ] chown/lchown
-    - [ ] fchown
-    - [ ] fchownat
+    - [x] chown/lchown
+    - [x] fchown
+    - [x] fchownat
     - [ ] rename
     - [ ] renameat
     - [ ] renameat2
@@ -82,8 +82,8 @@ Following syscalls are not parsed now. Sandbox mode blocks these syscalls right 
     - [ ] name_to_handle_at
     - [ ] open_by_handle_at
   - network
-    - [ ] connect
-    - [ ] listen 
+    - [x] connect
+    - [x] listen 
   - process
     - [ ] execve
     - [ ] execveat
