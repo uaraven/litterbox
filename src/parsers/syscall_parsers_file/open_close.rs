@@ -17,6 +17,7 @@
  */
 use crate::flags::open_flags_to_str;
 use crate::parsers::syscall_parsers_file::common::{add_dirfd_extra, read_pathname};
+use crate::parsers::syscall_parsers_file::dir;
 use crate::syscall_args::SyscallArgument;
 use crate::syscall_common::{EXTRA_FLAGS, read_buffer_as_type};
 use crate::syscall_event::get_abs_filepath_from_extra;
@@ -172,6 +173,7 @@ pub(crate) fn parse_faccessat(proc: &mut TraceProcess, regs: Regs) -> SyscallEve
     )
 }
 
+
 #[cfg(target_arch = "x86_64")]
 // int mknod(const char *pathname, mode_t mode, dev_t dev);
 pub(crate) fn parse_mknod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
@@ -180,7 +182,27 @@ pub(crate) fn parse_mknod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mode = regs.regs[1];
     SyscallEvent::new_with_extras(
         proc,
-        Vec::from([pathname_arg, SyscallArgument::FileMode(mode), SyscallArgument::Ptr(regs.regs[2])]),
+        Vec::from([pathname_arg, SyscallArgument::FileMode(mode), SyscallArgument::Int(regs.regs[2])]),
+        &regs,
+        extras,
+    )
+}
+
+// int mknodat(int dirfd, const char *pathname, mode_t mode, dev_t dev);
+pub(crate) fn parse_mknodat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let mut extras: ExtraData = HashMap::new();
+
+    let dirfd = regs.regs[0];
+    add_dirfd_extra(proc, dirfd as i64, &mut extras);
+
+    let (_, pathname_arg) = read_pathname(proc, &regs, 0, &mut extras);
+    let mode = regs.regs[1];
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([
+            SyscallArgument::DirFd(dirfd),
+            pathname_arg, SyscallArgument::FileMode(mode), 
+            SyscallArgument::Int(regs.regs[2])]),
         &regs,
         extras,
     )

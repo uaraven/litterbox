@@ -16,26 +16,72 @@
  *
  */
 
+use clap::ArgMatches;
+
+use crate::filters::argument_matcher::{ArgValue, ArgumentMatcher};
+use crate::filters::context_matcher::{self, ContextMatcher};
 use crate::filters::flag_matcher::FlagMatcher;
+use crate::filters::matcher::StrMatchOp;
+use crate::filters::path_matcher::PathMatcher;
 use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher};
 use crate::filters::utils::syscall_ids_by_names;
 use std::collections::HashSet;
 
-/// Creates a comprehensive write filter that blocks all filesystem-changing syscalls
-/// and logs the attempts. This includes:
-/// - Direct write operations (write, writev, pwrite, etc.)
-/// - File creation (open/openat with O_CREAT flag)
-/// - File and directory deletion (unlink, unlinkat, rmdir)
-/// - File and directory renaming (rename, renameat)
-/// - Directory creation (mkdir, mkdirat)
-/// - Link creation (link, linkat, symlink, symlinkat)
-/// - File truncation (truncate, ftruncate)
-/// - Extended attributes modification (setxattr, fsetxattr, etc.)
-/// - Other filesystem modification syscalls
-pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
-    // TODO: add list of allowed paths
-    // TODO: For allowed paths configure the same filters, but with path matcher and allow
-    // Comprehensive list of filesystem-changing syscalls
+
+fn create_filter_for_open_syscall(ctx_matcher: Option<ContextMatcher>, outcome: &FilterOutcome) -> SyscallFilter {
+    let open_syscalls = vec!["open", "openat", "openat2"];
+    let open_syscall_ids: HashSet<i64> = syscall_ids_by_names(open_syscalls);
+
+        // Create a flag matcher for O_CREAT to catch file creation attempts and O_TRUNC to catch truncation attempts
+    let flag_matcher = Some(FlagMatcher::new(vec![
+        "O_CREAT".to_string(),
+        "O_TRUNC".to_string(),
+    ]));
+
+    SyscallFilter {
+        matcher: SyscallMatcher {
+            syscall: open_syscall_ids,
+            args: vec![],
+            context_matcher: ctx_matcher,
+            flag_matcher,
+        },
+        outcome: outcome.clone()
+    }
+}
+
+fn create_filter_for_mknod(ctx_matcher: Option<ContextMatcher>, outcome: &FilterOutcome) -> Vec<SyscallFilter> {
+    let mknod_syscalls = vec!["mknod", "mknodat"];
+    let mknod_syscall_ids: HashSet<i64> = syscall_ids_by_names(mknod_syscalls);
+
+    const s_ifsreg: u64 = 0o100000; // Regular file
+
+    let mknod_arg_matcher = ArgumentMatcher::new(1, vec![ArgValue::BitSet(s_ifsreg)]);
+    let mknodat_arg_matcher = ArgumentMatcher::new(2, vec![ArgValue::BitSet(s_ifsreg)]);
+
+    vec![
+    SyscallFilter {
+        matcher: SyscallMatcher {
+            syscall: syscall_ids_by_names(vec!["mknod"]),
+            args: vec![mknod_arg_matcher],
+            context_matcher: ctx_matcher.clone(),
+            flag_matcher: None,
+        },
+        outcome: outcome.clone(),
+    },
+    SyscallFilter {
+        matcher: SyscallMatcher {
+            syscall: syscall_ids_by_names(vec!["mknodat"]),
+            args: vec![mknodat_arg_matcher],
+            context_matcher: ctx_matcher,
+            flag_matcher: None,
+        },
+        outcome: outcome.clone(),
+    },
+    ]
+}
+
+fn create_filter_for_writes(ctx_matcher: Option<ContextMatcher>, outcome: &FilterOutcome) -> SyscallFilter {
+        // Comprehensive list of filesystem-changing syscalls
     let write_syscalls = vec![
         // Direct write operations
         "write",
@@ -59,6 +105,9 @@ pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
         // Directory creation
         "mkdir",
         "mkdirat",
+        // File creation
+        "mknod",
+        "mknodat",
         // Link creation
         "link",
         "linkat",
@@ -96,43 +145,60 @@ pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
         "chroot",
     ];
 
-    let open_syscalls = vec!["open", "openat", "openat2"];
-
     // Convert syscall names to IDs, filtering out any that don't exist on current architecture
     let write_syscall_ids: HashSet<i64> = syscall_ids_by_names(write_syscalls);
-    let open_syscall_ids = syscall_ids_by_names(open_syscalls);
+     SyscallFilter {
+            matcher: SyscallMatcher {
+                syscall: write_syscall_ids,
+                args: vec![],
+                context_matcher: ctx_matcher,
+                flag_matcher: None,
+            },
+            outcome: outcome.clone(),
+        }
+}
 
-    // Create a flag matcher for O_CREAT to catch file creation attempts and O_TRUNC to catch truncation attempts
-    let flag_matcher = Some(FlagMatcher::new(vec![
-        "O_CREAT".to_string(),
-        "O_TRUNC".to_string(),
-    ]));
-
-    let filter_outcome = FilterOutcome {
+/// Creates a comprehensive write filter that blocks all filesystem-changing syscalls
+/// and logs the attempts. This includes:
+/// - Direct write operations (write, writev, pwrite, etc.)
+/// - File creation (open/openat with O_CREAT flag)
+/// - File and directory deletion (unlink, unlinkat, rmdir)
+/// - File and directory renaming (rename, renameat)
+/// - Directory creation (mkdir, mkdirat)
+/// - Link creation (link, linkat, symlink, symlinkat)
+/// - File truncation (truncate, ftruncate)
+/// - Extended attributes modification (setxattr, fsetxattr, etc.)
+/// - Other filesystem modification syscalls
+pub(crate) fn create_write_filter(allowed_paths: Vec<&str>) -> Vec<SyscallFilter> {
+    let filter_outcome_block = FilterOutcome {
         action: FilterAction::Block(-1), // EPERM error code
         tag: Some("write".to_string()),
         log: true,
     };
-    vec![
-        SyscallFilter {
-            matcher: SyscallMatcher {
-                syscall: open_syscall_ids.clone(),
-                args: vec![],
-                context_matcher: None,
-                flag_matcher: flag_matcher,
-            },
-            outcome: filter_outcome.clone(),
-        },
-        SyscallFilter {
-            matcher: SyscallMatcher {
-                syscall: write_syscall_ids,
-                args: vec![],
-                context_matcher: None,
-                flag_matcher: None,
-            },
-            outcome: filter_outcome.clone(),
-        },
-    ]
+    let filter_outcome_allow = FilterOutcome {
+        action: FilterAction::Allow,
+        tag: Some("write".to_string()),
+        log: true,
+    };
+
+    let mut filters = vec![];
+
+    if !allowed_paths.is_empty()  {
+        let ctx_matcher = Some(ContextMatcher::PathMatcher(PathMatcher::new(
+            allowed_paths.into_iter().map(|s| s.to_string()).collect(),
+            StrMatchOp::Prefix,
+            false,
+        )));
+        filters.push(create_filter_for_open_syscall(ctx_matcher.clone(), &filter_outcome_allow));
+        filters.extend(create_filter_for_mknod(ctx_matcher.clone(), &filter_outcome_allow));
+        filters.push(create_filter_for_writes(ctx_matcher.clone(), &filter_outcome_allow));
+    } 
+    filters.push(create_filter_for_open_syscall(None, &filter_outcome_block));
+    filters.extend(create_filter_for_mknod(None, &filter_outcome_block));
+    filters.push(create_filter_for_writes(None, &filter_outcome_block));
+    
+
+    filters
 }
 
 #[cfg(test)]
@@ -142,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_write_filter_blocks_write_syscalls() {
-        let filters = create_write_filter();
+        let filters = create_write_filter(vec![]);
         assert_eq!(filters.len(), 2); // Should have 2 filters: one for open with flags, one for write syscalls
 
         // Find the write syscalls filter (the one without flag_matcher)
@@ -167,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_write_filter_outcome() {
-        let filters = create_write_filter();
+        let filters = create_write_filter(vec![]);
 
         // Test that both filters have the same outcome (block and log)
         for filter in &filters {
@@ -183,7 +249,7 @@ mod tests {
 
     #[test]
     fn test_write_filter_has_flag_matcher() {
-        let filters = create_write_filter();
+        let filters = create_write_filter(vec![]);
 
         // Find the open syscalls filter (the one with flag_matcher)
         let open_filter = filters
@@ -211,7 +277,7 @@ mod tests {
         use crate::trace_process::TraceProcess;
         use std::collections::HashMap;
 
-        let filters = create_write_filter();
+        let filters = create_write_filter(vec![]);
         let open_filter = filters
             .iter()
             .find(|f| f.matcher.flag_matcher.is_some())
@@ -261,7 +327,7 @@ mod tests {
         use crate::trace_process::TraceProcess;
         use std::collections::HashMap;
 
-        let filters = create_write_filter();
+        let filters = create_write_filter(vec![]);
         let open_filter = filters
             .iter()
             .find(|f| f.matcher.flag_matcher.is_some())

@@ -55,7 +55,7 @@ pub(crate) fn create_sandbox_filters(
     let mut connectable_addresses = vec!["127.0.0.1", "::1"];
     connectable_addresses.extend(allow_connect);
 
-    let mut filters = create_write_filter();
+    let mut filters = create_write_filter(writable_paths);
     filters.push(create_reader_filter());
     filters.extend(create_network_filter(connectable_addresses));
     filters.push(create_process_filter(allow_spawn));

@@ -49,6 +49,8 @@ use syscall_numbers::*;
 // const E_NO_SYS: u64 = (-(38i64)) as u64;
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
+    use crate::parsers::syscall_parsers_file::open_close::parse_mknodat;
+
     let cid: c_long = id as i64;
     if cid < 0 {
         return parse_default;
@@ -77,6 +79,7 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         aarch64::SYS_chdir => parse_chdir,
         aarch64::SYS_fchdir => parse_fchdir,
         aarch64::SYS_mkdirat => parse_mkdirat,
+        aarch64::SYS_mknodat => parse_mknodat,
         aarch64::SYS_renameat => parse_renameat,
         aarch64::SYS_renameat2 => parse_renameat2,
         aarch64::SYS_unlinkat => parse_unlinkat,
@@ -101,7 +104,7 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
     use crate::parsers::syscall_parsers_file::dir::parse_mkdir;
     use crate::parsers::syscall_parsers_file::file_ops::{parse_chown, parse_rename, parse_stat};
     use crate::parsers::syscall_parsers_file::links::{parse_link, parse_symlink};
-    use crate::parsers::syscall_parsers_file::open_close::{parse_access, parse_creat, parse_open};
+    use crate::parsers::syscall_parsers_file::open_close::{parse_access, parse_creat, parse_open, parse_mknod};
 
     let cid: c_long = id as i64;
     if cid < 0 {
@@ -135,6 +138,8 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         x86_64::SYS_fchdir => parse_fchdir,
         x86_64::SYS_mkdir => parse_mkdir,
         x86_64::SYS_mkdirat => parse_mkdirat,
+        x86_64::SYS_mknod => parse_mknode,
+        x86_64::SYS_mknodat => parse_mknodeat,
         x86_64::SYS_rename => parse_rename,
         x86_64::SYS_renameat => parse_renameat,
         x86_64::SYS_renameat2 => parse_renameat2,
