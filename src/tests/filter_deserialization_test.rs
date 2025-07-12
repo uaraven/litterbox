@@ -28,7 +28,10 @@ fn base_json() -> serde_json::Value {
     json!({
         "matcher": {
             "syscall_names": ["openat"],
-            "args": { "0": [1, 2], "1": [3] },
+            "args": [
+                { "arg_index": 0, "values": [{"value":1, "op":"eq"}, {"value":2, "op":"eq"}] },
+                { "arg_index": 1, "values": [{"value":3, "op":"eq"}] }
+            ],
             "paths": {
                 "paths": ["/tmp/file", "/var/log"],
                 "compare_op": "exact",

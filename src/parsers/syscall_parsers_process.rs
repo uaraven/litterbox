@@ -18,7 +18,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    parsers::syscall_parsers_file::common::{add_dirfd_extra, read_pathname}, regs::Regs, syscall_args::SyscallArgument, syscall_common::{read_buffer, read_cstring, EXTRA_FLAGS}, syscall_event::{ExtraData, SyscallEvent}, trace_process::TraceProcess
+    parsers::syscall_parsers_file::common::{add_dirfd_extra, read_pathname}, regs::Regs, syscall_args::SyscallArgument, syscall_common::{read_buffer, EXTRA_FLAGS}, syscall_event::{ExtraData, SyscallEvent}, trace_process::TraceProcess
 };
 use nix::libc::clone_args;
 

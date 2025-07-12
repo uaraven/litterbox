@@ -1,5 +1,3 @@
-use std::collections::{HashMap, HashSet};
-
 /*
  * Litterbox - A sandboxing and tracing tool
  *
@@ -26,12 +24,14 @@ use crate::sandbox::sandbox_process::create_process_filter;
 use crate::sandbox::sandbox_read_filter::create_reader_filter;
 use crate::sandbox::sandbox_system::create_system_filter;
 use crate::sandbox::sandbox_write_filter::create_write_filter;
+use std::collections::HashSet;
+
 
 fn default_filter() -> SyscallFilter {
     SyscallFilter {
         matcher: SyscallMatcher {
             syscall: HashSet::default(),
-            args: HashMap::default(),
+            args: vec![],
             context_matcher: None,
             flag_matcher: None,
         },

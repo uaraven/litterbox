@@ -19,7 +19,7 @@
 use crate::filters::flag_matcher::FlagMatcher;
 use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher};
 use crate::filters::utils::syscall_ids_by_names;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 /// Creates a comprehensive write filter that blocks all filesystem-changing syscalls
 /// and logs the attempts. This includes:
@@ -117,7 +117,7 @@ pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
         SyscallFilter {
             matcher: SyscallMatcher {
                 syscall: open_syscall_ids.clone(),
-                args: HashMap::new(),
+                args: vec![],
                 context_matcher: None,
                 flag_matcher: flag_matcher,
             },
@@ -126,7 +126,7 @@ pub(crate) fn create_write_filter() -> Vec<SyscallFilter> {
         SyscallFilter {
             matcher: SyscallMatcher {
                 syscall: write_syscall_ids,
-                args: HashMap::new(),
+                args: vec![],
                 context_matcher: None,
                 flag_matcher: None,
             },

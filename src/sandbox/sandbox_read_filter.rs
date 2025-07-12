@@ -16,7 +16,7 @@
  *
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use crate::filters::{
     syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher},
@@ -45,7 +45,7 @@ pub(crate) fn create_reader_filter() -> SyscallFilter {
     SyscallFilter {
         matcher: SyscallMatcher {
             syscall: read_syscall_ids,
-            args: HashMap::default(),
+            args: vec![],
             context_matcher: None,
             flag_matcher: None,
         },

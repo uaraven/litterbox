@@ -20,7 +20,7 @@ use crate::filters::context_matcher::ContextMatcher;
 use crate::filters::matcher::StrMatchOp;
 use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher};
 use crate::filters::utils::syscall_ids_by_names;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 pub(crate) fn create_network_filter(allowed_addresses: Vec<&str>) -> Vec<SyscallFilter> {
     let network_syscalls = vec![
@@ -33,7 +33,7 @@ pub(crate) fn create_network_filter(allowed_addresses: Vec<&str>) -> Vec<Syscall
     let mut filters = vec![SyscallFilter {
         matcher: SyscallMatcher {
             syscall: syscall_ids_by_names(vec!["connect"]),
-            args: HashMap::default(),
+            args: vec![],
             context_matcher: Some(ContextMatcher::AddressMatcher(AddressMatcher::new(
                 vec![],
                 StrMatchOp::Prefix,
@@ -51,7 +51,7 @@ pub(crate) fn create_network_filter(allowed_addresses: Vec<&str>) -> Vec<Syscall
         filters.push(SyscallFilter {
             matcher: SyscallMatcher {
                 syscall: network_syscall_ids.clone(),
-                args: HashMap::default(),
+                args: vec![],
                 context_matcher: Some(ContextMatcher::AddressMatcher(AddressMatcher::new(
                     allowed_addresses
                         .into_iter()
@@ -72,7 +72,7 @@ pub(crate) fn create_network_filter(allowed_addresses: Vec<&str>) -> Vec<Syscall
     filters.push(SyscallFilter {
         matcher: SyscallMatcher {
             syscall: network_syscall_ids,
-            args: HashMap::default(),
+            args: vec![],
             context_matcher: None,
             flag_matcher: None,
         },

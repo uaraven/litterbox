@@ -21,12 +21,12 @@
 
 use std::collections::HashMap;
 
-use nix::libc;
 
 use crate::parsers::syscall_parsers_file::common::{
     add_dirfd_extra, add_fd_filepath, read_pathname, read_pathname_to_key,
 };
-use crate::syscall_common::{EXTRA_NEW_PATHNAME, read_cstring};
+use crate::parsers::syscall_parsers_file::fd_utils::is_fdcwd;
+use crate::syscall_common::{EXTRA_NEW_DIRFD, EXTRA_NEW_PATHNAME};
 use crate::{
     regs::Regs,
     syscall_args::SyscallArgument,
@@ -219,7 +219,10 @@ pub(crate) fn parse_renameat(proc: &mut TraceProcess, regs: Regs) -> SyscallEven
     add_dirfd_extra(proc, old_dirfd as i64, &mut extras);
 
     let new_dirfd = regs.regs[1];
-    add_dirfd_extra(proc, new_dirfd as i64, &mut extras);
+    if !is_fdcwd(new_dirfd as i32) && let Some(procfd) = proc.get_fd(new_dirfd as i64) {
+        extras.insert(EXTRA_NEW_DIRFD, procfd.value.clone());        
+    }
+    
 
     let (_, old_pathname_arg) = read_pathname(proc, &regs, 2, &mut extras);
     let (_, new_pathname_arg) =
@@ -245,7 +248,9 @@ pub(crate) fn parse_renameat2(proc: &mut TraceProcess, regs: Regs) -> SyscallEve
     add_dirfd_extra(proc, old_dirfd as i64, &mut extras);
 
     let new_dirfd = regs.regs[1];
-    add_dirfd_extra(proc, new_dirfd as i64, &mut extras);
+    if !is_fdcwd(new_dirfd as i32) && let Some(procfd) = proc.get_fd(new_dirfd as i64) {
+        extras.insert(EXTRA_NEW_DIRFD, procfd.value.clone());        
+    }
 
     let (_, old_pathname_arg) = read_pathname(proc, &regs, 2, &mut extras);
     let (_, new_pathname_arg) =

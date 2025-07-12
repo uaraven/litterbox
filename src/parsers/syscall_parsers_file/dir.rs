@@ -61,6 +61,7 @@ pub(crate) fn parse_fchdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent 
     )
 }
 
+#[cfg(target_arch = "x86_64")]
 // int mkdir(const char *pathname, mode_t mode);
 pub(crate) fn parse_mkdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();

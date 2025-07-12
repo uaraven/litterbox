@@ -171,3 +171,17 @@ pub(crate) fn parse_faccessat(proc: &mut TraceProcess, regs: Regs) -> SyscallEve
         extras,
     )
 }
+
+#[cfg(target_arch = "x86_64")]
+// int mknod(const char *pathname, mode_t mode, dev_t dev);
+pub(crate) fn parse_mknod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    let mut extras: ExtraData = HashMap::new();
+    let (_, pathname_arg) = read_pathname(proc, &regs, 0, &mut extras);
+    let mode = regs.regs[1];
+    SyscallEvent::new_with_extras(
+        proc,
+        Vec::from([pathname_arg, SyscallArgument::FileMode(mode), SyscallArgument::Ptr(regs.regs[2])]),
+        &regs,
+        extras,
+    )
+}

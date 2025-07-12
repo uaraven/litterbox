@@ -16,19 +16,13 @@
  *
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use nix::libc;
 
 use crate::{
     filters::{
-        context_matcher::ContextMatcher,
-        flag_matcher::FlagMatcher,
-        matcher::{
-            StrMatchOp::{self, Prefix},
-            StrMatcher,
-        },
-        path_matcher::PathMatcher,
+        argument_matcher::ArgumentMatcher, context_matcher::ContextMatcher, flag_matcher::FlagMatcher, matcher::StrMatcher
     },
     syscall_event::SyscallEvent,
     trace_process::TraceProcess,
@@ -67,7 +61,7 @@ impl Default for FilterOutcome {
 #[derive(Debug, Clone)]
 pub(crate) struct SyscallMatcher {
     pub syscall: HashSet<i64>,
-    pub args: HashMap<u8, HashSet<u64>>,
+    pub args: Vec<ArgumentMatcher>,
     pub context_matcher: Option<ContextMatcher>,
     pub flag_matcher: Option<FlagMatcher>,
 }
@@ -78,9 +72,10 @@ impl SyscallMatcher {
         if !self.syscall.is_empty() && !self.syscall.contains(&syscall_id) {
             return false;
         }
-        for (reg_idx, reg_value) in &self.args {
-            if *reg_idx < MAX_ARGS {
-                if !reg_value.contains(&syscall.regs.regs[*reg_idx as usize]) {
+
+        for argument_matcher in &self.args {
+            if argument_matcher.arg_index < MAX_ARGS {
+                if !argument_matcher.matches(&syscall.regs.regs[argument_matcher.arg_index as usize]) {
                     return false;
                 }
             }
@@ -138,149 +133,4 @@ impl SyscallMatcher {
 pub(crate) struct SyscallFilter {
     pub matcher: SyscallMatcher,
     pub outcome: FilterOutcome,
-}
-
-impl SyscallFilter {
-    pub fn stdio_allow(syscall: i64) -> Self {
-        let mut args = HashMap::new();
-        let mut arg_set = HashSet::new();
-        arg_set.insert(0);
-        arg_set.insert(1);
-        arg_set.insert(2);
-        args.insert(0, arg_set);
-        Self {
-            matcher: SyscallMatcher {
-                syscall: [syscall].into(),
-                args: args.clone(),
-                context_matcher: None,
-                flag_matcher: None,
-            },
-            outcome: FilterOutcome {
-                action: FilterAction::Allow,
-                tag: None,
-                log: true,
-            },
-        }
-    }
-
-    pub fn allow(syscall: &[i64], path: &Vec<String>) -> Self {
-        Self {
-            matcher: SyscallMatcher {
-                syscall: syscall.iter().cloned().collect(),
-                args: HashMap::new(),
-                context_matcher: if path.is_empty() {
-                    None
-                } else {
-                    Some(ContextMatcher::PathMatcher(PathMatcher::new(
-                        path.clone(),
-                        Prefix,
-                        false,
-                    )))
-                },
-                flag_matcher: None,
-            },
-            outcome: FilterOutcome {
-                action: FilterAction::Allow,
-                tag: None,
-                log: true,
-            },
-        }
-    }
-
-    pub fn with_paths(
-        syscalls: &[i64],
-        allow: bool,
-        paths: &Vec<String>,
-        path_match_op: StrMatchOp,
-    ) -> Self {
-        let path_list = paths.clone();
-        Self {
-            matcher: SyscallMatcher {
-                syscall: syscalls.iter().cloned().collect(),
-                args: HashMap::new(),
-                context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
-                    path_list,
-                    path_match_op,
-                    false,
-                ))),
-                flag_matcher: None,
-            },
-            outcome: FilterOutcome {
-                action: if allow {
-                    FilterAction::Allow
-                } else {
-                    FilterAction::Block(libc::ENOSYS)
-                },
-                tag: None,
-                log: true,
-            },
-        }
-    }
-
-    pub fn with_flags(syscall: i64, allow: bool, flags: &[&str]) -> Self {
-        let flag_list = flags.iter().map(|&s| s.to_string()).collect();
-        Self {
-            matcher: SyscallMatcher {
-                syscall: [syscall].into(),
-                args: HashMap::new(),
-                context_matcher: None,
-                flag_matcher: Some(FlagMatcher::new(flag_list)),
-            },
-            outcome: FilterOutcome {
-                action: if allow {
-                    FilterAction::Allow
-                } else {
-                    FilterAction::Block(libc::ENOSYS)
-                },
-                tag: None,
-                log: true,
-            },
-        }
-    }
-
-    pub fn with_paths_and_flags(
-        syscall: i64,
-        allow: bool,
-        paths: &Vec<String>,
-        path_match_op: StrMatchOp,
-        flags: &Vec<String>,
-    ) -> Self {
-        Self {
-            matcher: SyscallMatcher {
-                syscall: [syscall].into(),
-                args: HashMap::new(),
-                context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
-                    paths.clone(),
-                    path_match_op,
-                    false,
-                ))),
-                flag_matcher: Some(FlagMatcher::new(flags.clone())),
-            },
-            outcome: FilterOutcome {
-                action: if allow {
-                    FilterAction::Allow
-                } else {
-                    FilterAction::Block(libc::ENOSYS)
-                },
-                tag: None,
-                log: true,
-            },
-        }
-    }
-
-    pub fn block(syscall: &[i64]) -> Self {
-        Self {
-            matcher: SyscallMatcher {
-                syscall: syscall.iter().cloned().collect(),
-                args: HashMap::new(),
-                context_matcher: None,
-                flag_matcher: None,
-            },
-            outcome: FilterOutcome {
-                action: FilterAction::Block(libc::ENOSYS),
-                tag: None,
-                log: true,
-            },
-        }
-    }
 }

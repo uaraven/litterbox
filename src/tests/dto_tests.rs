@@ -1,3 +1,4 @@
+use crate::filters::argument_matcher::{ArgValue, ArgumentMatcher};
 /*
  * Litterbox - A sandboxing and tracing tool
  *
@@ -29,7 +30,10 @@ fn base_dto_json() -> serde_json::Value {
     json!({
         "matcher":{
             "syscall_names": ["openat", "read"],
-            "args": { "0": [1, 2], "1": [3] },
+            "args": [
+                { "arg_index": 0, "values": [{"value":1, "op":"eq"}, {"value":2, "op":"eq"}] },
+                { "arg_index": 1, "values": [{"value":3, "op":"eq"}] }
+            ],
             "paths": {
                 "paths": ["/tmp/file", "/var/log"],
                 "compare_op": "exact",
@@ -105,9 +109,8 @@ fn test_to_syscall_filter_success() {
             .contains(&(native::SYS_openat as i64))
     );
     assert!(filter.matcher.syscall.contains(&(native::SYS_read as i64)));
-    assert!(filter.matcher.args.get(&0).unwrap().contains(&1));
-    assert!(filter.matcher.args.get(&0).unwrap().contains(&2));
-    assert!(filter.matcher.args.get(&1).unwrap().contains(&3));
+    assert_eq!(filter.matcher.args[0], ArgumentMatcher::new(0, vec![ArgValue::Equal(1), ArgValue::Equal(2)]));
+    assert_eq!(filter.matcher.args[1], ArgumentMatcher::new(1, vec![ArgValue::Equal(3)]));
     assert!(filter.matcher.context_matcher.is_some());
     assert!(filter.matcher.flag_matcher.is_some());
     assert_eq!(filter.outcome.tag, Some("test_tag".to_string()));
@@ -157,9 +160,8 @@ fn test_to_syscall_filter_invalid_syscall_name() {
     let dto = SyscallFilterDto::from_json(json.to_string()).unwrap();
     let filter = dto.to_syscall_filter().unwrap();
     assert!(filter.matcher.syscall.is_empty());
-    assert!(filter.matcher.args.get(&0).unwrap().contains(&1));
-    assert!(filter.matcher.args.get(&0).unwrap().contains(&2));
-    assert!(filter.matcher.args.get(&1).unwrap().contains(&3));
+    assert_eq!(filter.matcher.args[0], ArgumentMatcher::new(0, vec![ArgValue::Equal(1), ArgValue::Equal(2)]));
+    assert_eq!(filter.matcher.args[1], ArgumentMatcher::new(1, vec![ArgValue::Equal(3)]));
     assert!(filter.matcher.context_matcher.is_some());
     assert!(filter.matcher.flag_matcher.is_some());
     assert_eq!(filter.outcome.tag, Some("test_tag".to_string()));

@@ -96,7 +96,7 @@ fn test_default_filtering_logger_primed() {
 fn test_trigger_event_blocks_until_primed() {
     let trigger = SyscallMatcher {
         syscall: HashSet::from([42]),
-        args: HashMap::default(),
+        args: vec![],
         context_matcher: Some(ContextMatcher::PathMatcher(PathMatcher::new(
             vec!["/tmp/trigger".to_string()],
             StrMatchOp::Exact,

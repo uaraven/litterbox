@@ -16,7 +16,7 @@
  *
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use crate::filters::path_matcher::PathMatcher;
 use crate::filters::{context_matcher::ContextMatcher, matcher::StrMatchOp, syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher}, utils::syscall_ids_by_names};
@@ -40,7 +40,7 @@ pub(crate) fn create_process_filter(allowed_binaries: Vec<&str>) -> SyscallFilte
     SyscallFilter {
         matcher: SyscallMatcher {
             syscall: exec_syscall_ids,
-            args: HashMap::default(),
+            args: vec![],
             context_matcher: path_matcher,
             flag_matcher: None,
         },

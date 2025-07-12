@@ -25,6 +25,7 @@ use crate::syscall_event::{ExtraData, SyscallEvent};
 use crate::trace_process::TraceProcess;
 use std::collections::HashMap;
 
+#[cfg(target_arch = "x86_64")]
 // int link(const char *oldpath, const char *newpath);
 pub(crate) fn parse_link(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
@@ -69,6 +70,7 @@ pub(crate) fn parse_linkat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent 
     )
 }
 
+#[cfg(target_arch = "x86_64")]
 // int symlink(const char *target, const char *linkpath);
 pub(crate) fn parse_symlink(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mut extras: ExtraData = HashMap::new();
