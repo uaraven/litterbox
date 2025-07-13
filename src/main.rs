@@ -51,6 +51,11 @@ fn main() {
         }
     };
 
+    if !cli.sandbox && !cli.filter {
+        eprintln!("Either --sandbox or --filter must be specified.");
+        std::process::exit(2);
+    }
+
     // The rest are arguments to pass to that program
     // let program_args: Vec<String> = args.collect();
     let program_args = cli
@@ -59,6 +64,11 @@ fn main() {
         .skip(1)
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
+
+    if program_args.is_empty() {
+        eprintln!("Usage: litterbox [options...] -- <program> <args...>");
+        std::process::exit(3);
+    }
 
     match unsafe { fork() } {
         Ok(ForkResult::Child) => {
