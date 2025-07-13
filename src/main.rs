@@ -96,7 +96,7 @@ fn main() {
             tracer.trace_process();
         }
         Err(e) => {
-            eprintln!("Failed to start app {}", e);
+            eprintln!("Failed to start {}: {}", program, e);
         }
     }
     // Spawn the command
