@@ -20,7 +20,7 @@ use std::collections::HashMap;
 
 use crate::parsers::syscall_parsers_file::common::add_fd_filepath;
 use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::{MAX_BUFFER_SIZE, read_buffer};
+use crate::syscall_common::{read_buffer, MAX_BUFFER_SIZE};
 use crate::trace_process::TraceProcess;
 use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
 

@@ -26,7 +26,6 @@ use crate::filters::syscall_filter::SyscallMatcher;
 use crate::sandbox::sandbox_network::create_network_filter;
 #[cfg(test)]
 use crate::{
-    FilteringLogger,
     filters::{
         context_matcher::ContextMatcher,
         flag_matcher::FlagMatcher,
@@ -38,6 +37,7 @@ use crate::{
     syscall_common::{EXTRA_FLAGS, EXTRA_PATHNAME},
     syscall_event::{SyscallEvent, SyscallEventListener, SyscallStopType},
     trace_process::TraceProcess,
+    FilteringLogger,
 };
 #[cfg(test)]
 use nix::{libc::user_regs_struct, unistd::Pid};

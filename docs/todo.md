@@ -31,8 +31,6 @@ Following syscalls are not parsed now. Sandbox mode blocks these syscalls right 
  - Handle more syscalls:
   - [ ] dup/dup2/dup3 - map path to new fd
   - [ ] fcntl with F_DUPFD/F_DUPFD_CLOEXEC flags
-  - [ ] chdir - log
-  - [ ] fchdir - log
   - [ ] statfs - log
   - [ ] fstatfs - log
   - read
@@ -77,8 +75,8 @@ Following syscalls are not parsed now. Sandbox mode blocks these syscalls right 
     - [x] unlinkat
     - [x] symlink
     - [x] symlinkat
-    - [ ] mknod
-    - [ ] mknodat
+    - [x] mknod
+    - [x] mknodat
     - [ ] chroot - log
   - network
     - [x] connect

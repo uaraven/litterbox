@@ -19,10 +19,10 @@
 use crate::parsers::syscall_parsers_file::delete::parse_unlinkat;
 use crate::parsers::syscall_parsers_file::dir::{parse_chdir, parse_fchdir, parse_mkdirat};
 use crate::parsers::syscall_parsers_file::open_close::{
-    parse_close, parse_faccessat, parse_openat, parse_openat2,
+    parse_close, parse_faccessat, parse_mknodat, parse_openat, parse_openat2
 };
 use crate::parsers::syscall_parsers_file::rw::{
-    parse_pread64_pwrite64, parse_preadv_pwritev, parse_preadv2_pwritev2, parse_read_write,
+    parse_pread64_pwrite64, parse_preadv2_pwritev2, parse_preadv_pwritev, parse_read_write,
     parse_readv_writev,
 };
 use crate::parsers::syscall_parsers_process::{
@@ -49,8 +49,6 @@ use syscall_numbers::*;
 // const E_NO_SYS: u64 = (-(38i64)) as u64;
 #[cfg(target_arch = "aarch64")]
 pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
-    use crate::parsers::syscall_parsers_file::open_close::parse_mknodat;
-
     let cid: c_long = id as i64;
     if cid < 0 {
         return parse_default;
@@ -102,9 +100,9 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
 pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
     use crate::parsers::syscall_parsers_file::delete::parse_unlink_rmdir;
     use crate::parsers::syscall_parsers_file::dir::parse_mkdir;
-    use crate::parsers::syscall_parsers_file::file_ops::{parse_chown, parse_rename, parse_stat};
+    use crate::parsers::syscall_parsers_file::file_ops::{parse_chown, parse_rename, parse_stat, parse_chmod};
     use crate::parsers::syscall_parsers_file::links::{parse_link, parse_symlink};
-    use crate::parsers::syscall_parsers_file::open_close::{parse_access, parse_creat, parse_open, parse_mknod};
+    use crate::parsers::syscall_parsers_file::open_close::{parse_access, parse_creat, parse_mknod, parse_open};
 
     let cid: c_long = id as i64;
     if cid < 0 {
@@ -128,7 +126,7 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         x86_64::SYS_pread64 => parse_pread64_pwrite64,
         x86_64::SYS_access => parse_access,
         x86_64::SYS_faccessat | x86_64::SYS_faccessat2 => parse_faccessat,
-        x86_64::SYS_chmod => parse_fchmod,
+        x86_64::SYS_chmod => parse_chmod,
         x86_64::SYS_fchmod => parse_fchmod,
         x86_64::SYS_fchmodat => parse_fchmodat,
         x86_64::SYS_chown | x86_64::SYS_lchown => parse_chown,
@@ -138,8 +136,8 @@ pub(crate) fn syscall_parser(id: u64) -> SyscallParserFn {
         x86_64::SYS_fchdir => parse_fchdir,
         x86_64::SYS_mkdir => parse_mkdir,
         x86_64::SYS_mkdirat => parse_mkdirat,
-        x86_64::SYS_mknod => parse_mknode,
-        x86_64::SYS_mknodat => parse_mknodeat,
+        x86_64::SYS_mknod => parse_mknod,
+        x86_64::SYS_mknodat => parse_mknodat,
         x86_64::SYS_rename => parse_rename,
         x86_64::SYS_renameat => parse_renameat,
         x86_64::SYS_renameat2 => parse_renameat2,

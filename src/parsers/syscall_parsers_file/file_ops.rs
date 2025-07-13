@@ -87,6 +87,7 @@ pub(crate) fn parse_fstatat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent
 #[cfg(target_arch = "x86_64")]
 // int chmod(const char *path, mode_t mode);
 pub(crate) fn parse_chmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
+    use crate::syscall_common::read_cstring;
     let is_entry = proc.is_entry(regs.syscall_id);
     let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[0] as usize) {
         Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),

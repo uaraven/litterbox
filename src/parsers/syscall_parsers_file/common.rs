@@ -19,7 +19,7 @@ use crate::parsers::syscall_parsers_file::fd_utils::is_fdcwd;
 use crate::{
     regs::Regs,
     syscall_args::SyscallArgument,
-    syscall_common::{EXTRA_CWD, EXTRA_DIRFD, EXTRA_PATHNAME, read_cstring},
+    syscall_common::{read_cstring, EXTRA_CWD, EXTRA_DIRFD, EXTRA_PATHNAME},
     syscall_event::ExtraData,
     trace_process::TraceProcess,
 };

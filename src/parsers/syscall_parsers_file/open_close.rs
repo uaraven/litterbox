@@ -17,9 +17,8 @@
  */
 use crate::flags::open_flags_to_str;
 use crate::parsers::syscall_parsers_file::common::{add_dirfd_extra, read_pathname};
-use crate::parsers::syscall_parsers_file::dir;
 use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::{EXTRA_FLAGS, read_buffer_as_type};
+use crate::syscall_common::{read_buffer_as_type, EXTRA_FLAGS};
 use crate::syscall_event::get_abs_filepath_from_extra;
 use crate::trace_process::TraceProcess;
 use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
