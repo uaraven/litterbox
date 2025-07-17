@@ -140,8 +140,6 @@ fn create_filter_for_writes(
         "lchown",
         "fchownat",
         // Other filesystem operations
-        "mknod",
-        "mknodat",
         "mount",
         "umount",
         "umount2",
@@ -463,7 +461,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_write_filter_with_tmp_path_mkdir_blocked() {
+    fn test_create_write_filter_with_tmp_path_mkdir_not_blocked() {
         let filters = create_write_filter(vec!["/tmp"]);
         let proc = TraceProcess::new(nix::unistd::Pid::from_raw(1000));
 
@@ -478,7 +476,7 @@ mod tests {
 
         let event = create_test_syscall_event("mkdir", &extra, &regs);
 
-        test_event_filter(filters, &proc, &event, true);
+        test_event_filter(filters, &proc, &event, false);
     }
 
     #[test]

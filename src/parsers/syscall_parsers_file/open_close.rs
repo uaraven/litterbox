@@ -31,7 +31,7 @@ use std::collections::HashMap;
 pub(crate) fn parse_creat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let mode = regs.regs[1];
     let mut extras: ExtraData = HashMap::new();
-    let (pathname, pathname_arg) = read_pathname(proc, &regs, 1, &mut extras);
+    let (pathname, pathname_arg) = read_pathname(proc, &regs, 0, &mut extras);
     if !pathname.is_empty() {
         proc.add_created_path(pathname.clone());
     }
@@ -50,7 +50,7 @@ pub(crate) fn parse_open(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
     let flags = regs.regs[1];
     let mut extras: ExtraData = HashMap::new();
     extras.insert(EXTRA_FLAGS, open_flags_to_str(flags));
-    let (pathname, pathname_arg) = read_pathname(proc, &regs, 1, &mut extras);
+    let (pathname, pathname_arg) = read_pathname(proc, &regs, 0, &mut extras);
     if !pathname.is_empty() {
         if (flags as i32) & libc::O_CREAT != 0 {
             proc.add_created_path(pathname.clone());
@@ -194,7 +194,7 @@ pub(crate) fn parse_mknodat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent
     let dirfd = regs.regs[0];
     add_dirfd_extra(proc, dirfd as i64, &mut extras);
 
-    let (_, pathname_arg) = read_pathname(proc, &regs, 0, &mut extras);
+    let (_, pathname_arg) = read_pathname(proc, &regs, 1, &mut extras);
     let mode = regs.regs[1];
     SyscallEvent::new_with_extras(
         proc,

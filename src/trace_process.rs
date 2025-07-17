@@ -23,8 +23,12 @@ use std::{
 
 use nix::{
     libc::{self, user_regs_struct},
+    errno::Errno,
     unistd::Pid,
 };
+use std::ffi::c_void;
+
+
 
 use crate::syscall_event::{SyscallEvent, SyscallStopType};
 
