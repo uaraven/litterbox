@@ -25,10 +25,9 @@ use syscall_numbers::native;
 use crate::filters::syscall_filter::SyscallMatcher;
 #[cfg(test)]
 use crate::{
-    FilteringLogger,
     filters::{
         context_matcher::ContextMatcher,
-        matcher::StrMatchOp,
+        str_matcher::StrMatchOp,
         path_matcher::PathMatcher,
         syscall_filter::{FilterOutcome, SyscallFilter},
     },
@@ -36,6 +35,7 @@ use crate::{
     syscall_common::EXTRA_PATHNAME,
     syscall_event::{SyscallEvent, SyscallEventListener},
     trace_process::TraceProcess,
+    FilteringLogger,
 };
 
 #[test]

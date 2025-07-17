@@ -17,7 +17,7 @@
  */
 
 use crate::filters::{
-    matcher::{StrMatchOp, StrMatcher},
+    str_matcher::{StrMatchOp, StrMatcher},
     path_matcher::PathMatcher,
 };
 

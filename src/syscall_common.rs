@@ -26,11 +26,16 @@ use crate::regs::Regs;
 use crate::syscall_event::SyscallEvent;
 use crate::trace_process::TraceProcess;
 
+pub(crate) const BLOCKED_SYSCALL_ID: u64 = 18446744073709551615;
+
 pub(crate) const EXTRA_PATHNAME: &str = "pathname";
+pub(crate) const EXTRA_NEW_PATHNAME: &str = "new_pathname";
+pub(crate) const EXTRA_TARGET_PATHNAME: &str = "target_pathname";
 pub(crate) const EXTRA_ADDR: &str = "addr";
 pub(crate) const EXTRA_FLAGS: &str = "flags";
 pub(crate) const EXTRA_CWD: &str = "cwd";
 pub(crate) const EXTRA_DIRFD: &str = "dirfd";
+pub(crate) const EXTRA_NEW_DIRFD: &str = "new_dirfd";
 
 pub(crate) const MAX_BUFFER_SIZE: usize = 32;
 

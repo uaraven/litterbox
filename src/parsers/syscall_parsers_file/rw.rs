@@ -18,13 +18,11 @@
 use std::cmp::min;
 use std::collections::HashMap;
 
+use crate::parsers::syscall_parsers_file::common::add_fd_filepath;
 use crate::syscall_args::SyscallArgument;
-use crate::syscall_common::{MAX_BUFFER_SIZE, read_buffer, read_cstring};
-use crate::syscall_parsers_file::common::{add_fd_filepath, read_pathname};
+use crate::syscall_common::{read_buffer, MAX_BUFFER_SIZE};
 use crate::trace_process::TraceProcess;
 use crate::{regs::Regs, syscall_event::ExtraData, syscall_event::SyscallEvent};
-
-use super::common::add_dirfd_extra;
 
 // ssize_t read(int fd, void buf[.count], size_t count);
 // ssize_t write(int fd, const void buf[.count], size_t count);
@@ -134,89 +132,3 @@ pub(crate) fn parse_pread64_pwrite64(proc: &mut TraceProcess, regs: Regs) -> Sys
         extras,
     )
 }
-
-#[cfg(target_arch = "x86_64")]
-// int chmod(const char *path, mode_t mode);
-pub(crate) fn parse_chmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let is_entry = proc.is_entry(regs.syscall_id);
-    let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[0] as usize) {
-        Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
-        Err(_) => ("".to_string(), SyscallArgument::Ptr(regs.regs[0])),
-    };
-    if !is_entry {
-        proc.set_cwd(pathname.clone());
-    }
-    SyscallEvent::new_with_extras(proc, Vec::from([pathname_arg]), &regs, Default::default())
-}
-
-// int fchmod(int fd, mode_t mode);
-pub(crate) fn parse_fchmod(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let mut extras: ExtraData = HashMap::new();
-    // on arm64, the fd in regs[0] is rewritten with the return value on the exit from syscall
-    // so we need to use the fd from the entry event
-    let fd = add_fd_filepath(proc, &regs, &mut extras);
-    SyscallEvent::new_with_extras(
-        proc,
-        Vec::from([SyscallArgument::Fd(fd), SyscallArgument::Int(regs.regs[1])]),
-        &regs,
-        extras,
-    )
-}
-
-// int fchmodat(int dirfd, const char *pathname, mode_t mode, int flags);
-pub(crate) fn parse_fchmodat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let dirfd = regs.regs[0];
-    let flags = regs.regs[2];
-    let mut extra: ExtraData = HashMap::new();
-    let pathname_arg = read_pathname(proc, &regs, 1, &mut extra).1;
-    add_dirfd_extra(proc, dirfd as i64, &mut extra);
-
-    SyscallEvent::new_with_extras(
-        proc,
-        Vec::from([
-            SyscallArgument::DirFd(dirfd),
-            pathname_arg,
-            SyscallArgument::Int(flags),
-        ]),
-        &regs,
-        extra,
-    )
-}
-
-// int chdir(const char *path);
-pub(crate) fn parse_chdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let is_entry = proc.is_entry(regs.syscall_id);
-    let (pathname, pathname_arg) = match read_cstring(proc.get_pid(), regs.regs[1] as usize) {
-        Ok(pathname) => (pathname.clone(), SyscallArgument::String(pathname)),
-        Err(_) => ("".to_string(), SyscallArgument::Ptr(regs.regs[1])),
-    };
-    if !is_entry && regs.return_value == 0 {
-        proc.set_cwd(pathname.clone());
-    }
-    SyscallEvent::new_with_extras(proc, Vec::from([pathname_arg]), &regs, Default::default())
-}
-
-// int fchdir(int fd);
-pub(crate) fn parse_fchdir(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let is_entry = proc.is_entry(regs.syscall_id);
-    let fd = regs.regs[0] as i64;
-    let mut extras = HashMap::<&str, String>::new();
-    if let Some(fd_data) = proc.get_fd(fd) {
-        if !is_entry && fd > 0 && regs.return_value == 0 {
-            proc.set_cwd(fd_data.value.clone());
-        }
-    }
-    if let Some(fd_data) = proc.get_fd(fd) {
-        extras.insert(fd_data.name, fd_data.value.clone());
-    }
-    SyscallEvent::new_with_extras(
-        proc,
-        Vec::from([SyscallArgument::DirFd(regs.regs[0])]),
-        &regs,
-        extras,
-    )
-}
-
-// int ioctl(int fd, unsigned long op, ...);  /* glibc, BSD */
-// int ioctl(int fd, int op, ...);            /* musl, other UNIX */
-// ssize_t copy_file_range(int fd_in, off_t *_Nullable off_in, int fd_out, off_t *_Nullable off_out, size_t size, unsigned int flags);

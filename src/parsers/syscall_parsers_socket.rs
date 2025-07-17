@@ -29,7 +29,7 @@ use nix::{
 use crate::{
     regs::Regs,
     syscall_args::SyscallArgument,
-    syscall_common::{EXTRA_ADDR, MAX_BUFFER_SIZE, read_buffer, read_cstring},
+    syscall_common::{read_buffer, read_cstring, EXTRA_ADDR, MAX_BUFFER_SIZE},
     syscall_event::{ExtraData, SyscallEvent},
     trace_process::TraceProcess,
 };

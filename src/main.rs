@@ -16,37 +16,34 @@
  *
  */
 mod cli_args;
-mod fd_utils;
 mod filter_listener;
 mod filter_loader;
 mod filters;
 mod flags;
 mod loggers;
-mod preconfigured;
 mod regs;
 mod sandbox;
 mod strace;
 mod syscall_args;
 mod syscall_common;
 mod syscall_event;
-mod syscall_parser;
-mod syscall_parsers_file;
-mod syscall_parsers_process;
-mod syscall_parsers_socket;
 mod tests;
 mod trace_process;
+mod parsers;
 
 use clap::Parser;
 use cli_args::Args;
 use filter_listener::FilteringLogger;
 use loggers::text_logger::TextLogger;
 use nix::sys::ptrace;
-use nix::unistd::{ForkResult, fork};
+use nix::unistd::{fork, ForkResult};
 
 use crate::filter_loader::filters_from_args;
 
 fn main() {
     let cli = Args::parse();
+
+    let verbose = cli.verbose;
 
     let program = match cli.program.iter().next() {
         Some(p) => p,
@@ -55,6 +52,11 @@ fn main() {
             std::process::exit(1);
         }
     };
+
+    if !cli.sandbox && !cli.filter {
+        eprintln!("Either --sandbox or --filter must be specified.");
+        std::process::exit(2);
+    }
 
     // The rest are arguments to pass to that program
     // let program_args: Vec<String> = args.collect();
@@ -68,15 +70,17 @@ fn main() {
     match unsafe { fork() } {
         Ok(ForkResult::Child) => {
             let pid = std::process::id();
-            println!("Child process PID: {}", pid);
+            eprintln!("Child process PID: {}", pid);
             ptrace::traceme().expect("Failed to trace child process");
-            println!("Starting child process: {}", program);
+            eprintln!("Starting child process: {}", program);
             let err = exec::Command::new(program).args(&program_args).exec();
-            println!("Error: {}", err);
+            eprintln!("Error: {}", err);
         }
         Ok(ForkResult::Parent { child }) => {
             let pid = std::process::id();
-            println!("Parent process PID: {}", pid);
+            if verbose {
+                println!("Parent process PID: {}", pid);
+            }
 
             let filter_logger = match filters_from_args(cli) {
                 Ok(logger) => logger,
@@ -86,12 +90,12 @@ fn main() {
                 }
             };
 
-            let mut tracer = strace::TraceContext::new(child, Some(filter_logger));
+            let mut tracer = strace::TraceContext::new(child, Some(filter_logger), verbose);
 
             tracer.trace_process();
         }
         Err(e) => {
-            eprintln!("Failed to start app {}", e);
+            eprintln!("Failed to start {}: {}", program, e);
         }
     }
     // Spawn the command

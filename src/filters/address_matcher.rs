@@ -15,9 +15,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
-use crate::filters::matcher::StrMatchOp;
+use crate::filters::str_matcher::StrMatchOp;
 
-use super::matcher::StrMatcher;
+use super::str_matcher::StrMatcher;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AddressMatcher {
@@ -46,8 +46,15 @@ impl StrMatcher for AddressMatcher {
             }
             None => (addr.clone(), 0),
         };
-        if port != 0 && self.port.is_some() && port != self.port.unwrap() {
-            return false;
+        if let Some(matcher_port) = self.port {
+            // if filter has port defined, only events with the same port will match
+            if port != matcher_port {
+                return false;
+            }
+        }
+        // if filter doesn't have address defined, any event will match (if port matched)
+        if self.addresses.is_empty() {
+            return true;
         }
         match self.match_op {
             StrMatchOp::Exact => self.addresses.contains(&address),

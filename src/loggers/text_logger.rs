@@ -26,7 +26,14 @@ pub(crate) struct TextLogger {}
 impl SyscallLogger for TextLogger {
     fn log_event(&self, event: &SyscallEvent) {
         let mut content = String::new();
-        content.push_str(&format!("[{}] {} ({})", event.pid, event.name, event.id));
+        let mut direction =  match event.stop_type {
+            SyscallStopType::Enter => "⤵",
+            SyscallStopType::Exit => "⤴"
+        }.to_string();
+        if event.blocked {
+            direction.push_str(" 🚫");
+        }
+        content.push_str(&format!("[{}] {} {} ({})", event.pid, direction, event.name, event.id));
         if let Some(label) = &event.label {
             content.push_str(&format!(" |{}|", label));
         }

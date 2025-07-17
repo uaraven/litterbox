@@ -22,18 +22,21 @@
   - [ ] Block shutdown and reboot
 
 
+## Limitations
+
+Following syscalls are not parsed now. Sandbox mode blocks these syscalls right away:
+ - name_to_handle_at
+ - open_by_handle_at
 
  - Handle more syscalls:
   - [ ] dup/dup2/dup3 - map path to new fd
   - [ ] fcntl with F_DUPFD/F_DUPFD_CLOEXEC flags
-  - [ ] chdir - log
-  - [ ] fchdir - log
   - [ ] statfs - log
   - [ ] fstatfs - log
   - read
-    - [ ] openat
-    - [ ] name_to_handle_at
-    - [ ] open_by_handle_at
+    - [x] openat
+    - [x] name_to_handle_at
+    - [x] open_by_handle_at
     - [x] read
     - [x] readv
     - [x] pread
@@ -42,8 +45,8 @@
     - [x] preadv2
   - write
     - [x] open/openat with O_CREAT or O_TRUNC flags
-    - [ ] access 
-    - [ ] faccessat/faccessat2
+    - [x] access
+    - [x] faccessat/faccessat2
     - [x] write
     - [x] writev
     - [x] pwrite
@@ -52,34 +55,34 @@
     - [x] pwritev2
     - [ ] mmap with PROT_WRITE protection flag
     - [ ] sendfile
-    - [ ] chmod
-    - [ ] fchmod
-    - [ ] fchmodat
-    - [ ] chown/lchown
-    - [ ] fchown
-    - [ ] fchownat
-    - [ ] rename
-    - [ ] renameat
-    - [ ] renameat2
-    - [ ] mkdir
-    - [ ] mkdirat
-    - [ ] rmdir
-    - [ ] link
-    - [ ] linkat
-    - [ ] unlinkat
-    - [ ] symlink
-    - [ ] symlinkat
-    - [ ] mknod
-    - [ ] mknodat
+    - [x] chmod
+    - [x] fchmod
+    - [x] fchmodat
+    - [x] chdir
+    - [x] fchdir
+    - [x] chown/lchown
+    - [x] fchown
+    - [x] fchownat
+    - [x] rename
+    - [x] renameat
+    - [x] renameat2
+    - [x] mkdir
+    - [x] mkdirat
+    - [x] rmdir
+    - [x] link
+    - [x] linkat
+    - [x] unlink
+    - [x] unlinkat
+    - [x] symlink
+    - [x] symlinkat
+    - [x] mknod
+    - [x] mknodat
     - [ ] chroot - log
-    - [ ] name_to_handle_at
-    - [ ] open_by_handle_at
   - network
-    - [ ] connect
-    - [ ] listen 
+    - [x] connect
+    - [x] listen 
   - process
-    - [ ] execve
-    - [ ] execveat
+    - [x] execve
+    - [x] execveat
   - system
-    - [ ] shutdown
-    - [ ] reboot
+    - [x] reboot

@@ -16,6 +16,7 @@
  *
  */
 
-pub mod default;
-pub mod permissive;
-pub mod restrictive;
+pub mod syscall_parser;
+pub mod syscall_parsers_process;
+pub mod syscall_parsers_socket;
+pub mod syscall_parsers_file;

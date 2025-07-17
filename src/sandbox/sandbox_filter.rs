@@ -1,5 +1,3 @@
-use std::collections::{HashMap, HashSet};
-
 /*
  * Litterbox - A sandboxing and tracing tool
  *
@@ -21,14 +19,19 @@ use crate::filter_listener::FilteringLogger;
 use crate::filter_loader::FilterError;
 use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher};
 use crate::loggers::syscall_logger::SyscallLogger;
+use crate::sandbox::sandbox_network::create_network_filter;
+use crate::sandbox::sandbox_process::create_process_filter;
 use crate::sandbox::sandbox_read_filter::create_reader_filter;
+use crate::sandbox::sandbox_system::create_system_filter;
 use crate::sandbox::sandbox_write_filter::create_write_filter;
+use std::collections::HashSet;
+
 
 fn default_filter() -> SyscallFilter {
     SyscallFilter {
         matcher: SyscallMatcher {
             syscall: HashSet::default(),
-            args: HashMap::default(),
+            args: vec![],
             context_matcher: None,
             flag_matcher: None,
         },
@@ -52,8 +55,11 @@ pub(crate) fn create_sandbox_filters(
     let mut connectable_addresses = vec!["127.0.0.1", "::1"];
     connectable_addresses.extend(allow_connect);
 
-    let mut filters = create_write_filter();
+    let mut filters = create_write_filter(writable_paths);
     filters.push(create_reader_filter());
+    filters.extend(create_network_filter(connectable_addresses));
+    filters.extend(create_process_filter(allow_spawn));
+    filters.push(create_system_filter());
     filters.push(default_filter());
 
     Ok(FilteringLogger::new(filters, None, Some(logger)))

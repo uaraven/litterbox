@@ -18,11 +18,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    regs::Regs,
-    syscall_args::SyscallArgument,
-    syscall_common::{EXTRA_FLAGS, read_buffer, read_cstring},
-    syscall_event::{ExtraData, SyscallEvent},
-    trace_process::TraceProcess,
+    parsers::syscall_parsers_file::common::{add_dirfd_extra, read_pathname}, regs::Regs, syscall_args::SyscallArgument, syscall_common::{read_buffer, EXTRA_FLAGS}, syscall_event::{ExtraData, SyscallEvent}, trace_process::TraceProcess
 };
 use nix::libc::clone_args;
 
@@ -63,13 +59,12 @@ pub(crate) fn parse_clone3(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent 
     )
 }
 
+// int execve(const char *pathname, char *const _Nullable argv[], char *const _Nullable envp[]);
 pub(crate) fn parse_execve(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let pathname_arg = match read_cstring(proc.get_pid(), regs.regs[0] as usize) {
-        Ok(pathname) => SyscallArgument::String(pathname),
-        Err(_) => SyscallArgument::Ptr(regs.regs[0]),
-    };
+    let mut extras: ExtraData = HashMap::new();
+    let (_, pathname_arg) = read_pathname(proc, &regs, 0, &mut extras);
 
-    SyscallEvent::new(
+    SyscallEvent::new_with_extras(
         proc,
         Vec::from([
             pathname_arg,
@@ -77,23 +72,29 @@ pub(crate) fn parse_execve(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent 
             SyscallArgument::Ptr(regs.regs[2]),
         ]),
         &regs,
+        extras
     )
 }
 
+// int execveat(int dirfd, const char *pathname, char *const _Nullable argv[], char *const _Nullable envp[], int flags);
 pub(crate) fn parse_execveat(proc: &mut TraceProcess, regs: Regs) -> SyscallEvent {
-    let pathname_arg = match read_cstring(proc.get_pid(), regs.regs[0] as usize) {
-        Ok(pathname) => SyscallArgument::String(pathname),
-        Err(_) => SyscallArgument::Ptr(regs.regs[1]),
-    };
+    let mut extras: ExtraData = HashMap::new();
 
-    SyscallEvent::new(
+    let dirfd = regs.regs[0];
+    add_dirfd_extra(proc, dirfd as i64, &mut extras);
+    
+    let (_, pathname_arg) = read_pathname(proc, &regs, 1, &mut extras);
+
+    SyscallEvent::new_with_extras(
         proc,
         Vec::from([
-            SyscallArgument::Int(regs.regs[0]),
+            SyscallArgument::DirFd(dirfd),
             pathname_arg,
             SyscallArgument::Ptr(regs.regs[2]),
-            SyscallArgument::Int(regs.regs[3]),
+            SyscallArgument::Ptr(regs.regs[3]),
+            SyscallArgument::Int(regs.regs[4]),
         ]),
         &regs,
+        extras
     )
 }

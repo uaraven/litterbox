@@ -23,8 +23,11 @@ use std::{
 
 use nix::{
     libc::{self, user_regs_struct},
+    errno::Errno,
     unistd::Pid,
 };
+use std::ffi::c_void;
+
 
 
 use crate::syscall_event::{SyscallEvent, SyscallStopType};
@@ -144,10 +147,14 @@ impl TraceProcess {
     // If the current syscall ID is not the same as the last syscall ID, return None
     pub(crate) fn get_last_syscall(&self, current_syscall_id: u64) -> Option<&SyscallEvent> {
         if self.last_syscall.id != current_syscall_id {
-            return None;
+            None
         } else {
             Some(&self.last_syscall)
         }
+    }
+
+    pub(crate) fn get_previous_syscall(&self) -> SyscallEvent {
+        self.last_syscall.clone()
     }
 
     pub(crate) fn set_last_syscall(&mut self, syscall: &SyscallEvent) {

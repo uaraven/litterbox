@@ -7,7 +7,10 @@ what to do with the matching events.
 {
     "matcher": {
       "syscall_names": ["name1", "name2", ..., "nameN"],
-      "args": {"<arg0>": [value1, value2, ..., valueN], ...},
+      "args": [
+        {"arg_index": <argument_index>, "values": [{"value":u64, "op":"eq|bitset"},...]},
+        ...
+      ],
       "paths": {
         "paths": ["<path1>", "<path2>", ..., "<pathN>"],
         "compare_op": "match|prefix|suffix|contains",
@@ -34,7 +37,14 @@ what to do with the matching events.
  - "matcher" - a matcher object containing conditions to match syscall events
     - `syscall_names` - a list of syscall names, such as "openat" or "sendmsg". If the name is not defined
  for the current architecture, it is silently ignored
-    - `args` - a map of argument index to possible values. Each syscall can have up to 6 arguments. If there are multiple values for a syscall argument, it's enough for any of them to match
+    - `args` - list of matchers for syscall arguments. Each matcher contains
+      - `arg_index` - index of the argument, 0..5
+      - `values` - value machers for the argument
+        - `value` - value to match against the syscall argument
+        - `op` - match operation, should be "eq" for equality check or "bitset" for bit mask check. Bit mask check
+          is equal to following operation: `arg[arg_index] & mask_value == mask_value`
+      All syscall arguments are treated as unsigned 64-bit integers, even if they contain pointer or other value. As
+      such argument matching only makes sense for either integer parameters or flags.
     - `paths` - matches events by file paths. Contains following subfields:
       - `paths` - list of paths to match. 
       - `compare_op` - the operation with which to compare paths. One of:

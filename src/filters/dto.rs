@@ -15,7 +15,7 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use serde::Deserialize;
 
@@ -26,12 +26,11 @@ use super::{
     utils::syscall_id_by_name,
 };
 use crate::{
-    FilteringLogger,
     filters::{
-        address_matcher::AddressMatcher, context_matcher::ContextMatcher, matcher::StrMatchOp,
-        syscall_filter::SyscallMatcher,
+        address_matcher::AddressMatcher, argument_matcher::{ArgValue, ArgumentMatcher}, context_matcher::ContextMatcher, str_matcher::StrMatchOp, syscall_filter::SyscallMatcher
     },
     loggers::syscall_logger::SyscallLogger,
+    FilteringLogger,
 };
 
 #[derive(Debug)]
@@ -62,9 +61,41 @@ pub(crate) struct PathMatcherDto {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ArgValueDto {
+    pub value: u64,
+    pub op: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ArgMatcherDto {
+    pub arg_index: u8,
+    pub values: Vec<ArgValueDto>,
+}
+
+impl ArgMatcherDto {
+    pub fn to_argument_matcher(&self) -> Result<ArgumentMatcher, ParsingError> {
+        let matchers = self
+            .values
+            .iter()
+            .map(|v| {
+                match v.op.as_str() {
+                    "eq" => Ok(ArgValue::Equal(v.value)),
+                    "bitset" => Ok(ArgValue::BitSet(v.value)),
+                    _ => Err(ParsingError {
+                        message: format!("Invalid argument matcher operation: {}", v.op),
+                    }),
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(ArgumentMatcher::new(self.arg_index, matchers))
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub(crate) struct SyscallMatcherDto {
     pub syscall_names: Vec<String>,
-    pub args: HashMap<u8, Vec<u64>>,
+    pub args: Vec<ArgMatcherDto>,
     pub paths: Option<PathMatcherDto>,
     pub addresses: Option<AddressMatcherDto>,
     pub flags: Vec<String>,
@@ -80,11 +111,12 @@ impl SyscallMatcherDto {
             .map(|f| f.unwrap() as i64)
             .collect::<HashSet<_>>();
 
-        let arg_map = self
+        let arg_matcher_list = self
             .args
             .iter()
-            .map(|(k, v)| (*k, v.iter().cloned().collect()))
-            .collect();
+            .map(|arg_matcher_dto| arg_matcher_dto.to_argument_matcher())
+            .collect::<Result<Vec<_>, _>>()?;
+       
 
         let context_matcher = if let Some(path_matcher) = &self.paths {
             let path_match_op = parse_compare_op(path_matcher.compare_op.as_str())?;
@@ -106,7 +138,7 @@ impl SyscallMatcherDto {
 
         let matcher = SyscallMatcher {
             syscall: syscall_ids,
-            args: arg_map,
+            args: arg_matcher_list,
             context_matcher: context_matcher,
             flag_matcher: if !self.flags.is_empty() {
                 Some(FlagMatcher::new(self.flags.clone()))

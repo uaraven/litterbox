@@ -15,19 +15,18 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use crate::filters::syscall_filter::SyscallMatcher;
+use crate::filters::syscall_filter::{FilterOutcome, SyscallMatcher};
 use crate::{
-    TextLogger,
     filters::{
         syscall_filter::{FilterAction, SyscallFilter},
         utils::group_filters_by_syscall,
     },
     loggers::syscall_logger::SyscallLogger,
-    preconfigured::default::default_filters,
     syscall_event::{SyscallEvent, SyscallEventListener},
     trace_process::TraceProcess,
+    TextLogger,
 };
 
 pub(crate) struct FilteringLogger {
@@ -57,7 +56,14 @@ impl FilteringLogger {
                 defaults.push(filter);
                 continue;
             } else {
-                filter_map.extend(group_filters_by_syscall(vec![filter]));
+                let filter_group = group_filters_by_syscall(vec![filter]);
+                filter_group.iter().for_each(|filter| {
+                    if let Some(filter_map_entry) = filter_map.get_mut(filter.0) {
+                        filter_map_entry.extend(filter.1.iter().map(|f|f.clone()));
+                    } else {
+                        filter_map.insert(*filter.0, filter.1.clone());
+                    }
+                })
             }
         }
         Self {
@@ -128,5 +134,30 @@ impl SyscallEventListener for FilteringLogger {
             }
         }
         Some(event.clone())
+    }
+}
+
+
+/// default_filters returns a default filtering logger.
+/// It allows all syscalls and logs them
+pub(crate) fn default_filters(logger: Box<dyn SyscallLogger>) -> FilteringLogger {
+    FilteringLogger {
+        primed: true,
+        trigger_event: None,
+        filters: HashMap::default(),
+        default_filters: vec![SyscallFilter {
+            matcher: SyscallMatcher {
+                syscall: HashSet::new(),
+                args: Default::default(),
+                context_matcher: None,
+                flag_matcher: None,
+            },
+            outcome: FilterOutcome {
+                action: FilterAction::Allow,
+                log: true,
+                tag: None,
+            },
+        }],
+        logger: Some(logger),
     }
 }
