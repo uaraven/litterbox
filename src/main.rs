@@ -43,6 +43,8 @@ use crate::filter_loader::filters_from_args;
 fn main() {
     let cli = Args::parse();
 
+    let verbose = cli.verbose;
+
     let program = match cli.program.iter().next() {
         Some(p) => p,
         None => {
@@ -68,15 +70,17 @@ fn main() {
     match unsafe { fork() } {
         Ok(ForkResult::Child) => {
             let pid = std::process::id();
-            println!("Child process PID: {}", pid);
+            eprintln!("Child process PID: {}", pid);
             ptrace::traceme().expect("Failed to trace child process");
-            println!("Starting child process: {}", program);
+            eprintln!("Starting child process: {}", program);
             let err = exec::Command::new(program).args(&program_args).exec();
-            println!("Error: {}", err);
+            eprintln!("Error: {}", err);
         }
         Ok(ForkResult::Parent { child }) => {
             let pid = std::process::id();
-            println!("Parent process PID: {}", pid);
+            if verbose {
+                println!("Parent process PID: {}", pid);
+            }
 
             let filter_logger = match filters_from_args(cli) {
                 Ok(logger) => logger,
@@ -86,7 +90,7 @@ fn main() {
                 }
             };
 
-            let mut tracer = strace::TraceContext::new(child, Some(filter_logger));
+            let mut tracer = strace::TraceContext::new(child, Some(filter_logger), verbose);
 
             tracer.trace_process();
         }

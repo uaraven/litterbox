@@ -40,7 +40,7 @@ pub(crate) fn create_process_filter(allowed_binaries: Vec<&str>) -> Vec<SyscallF
     result.push(
         SyscallFilter{
             matcher: SyscallMatcher {
-                syscall: syscall_ids_by_names(vec!["fork", "vfork"]),
+                syscall: syscall_ids_by_names(vec!["fork", "vfork", "clone", "clone3"]),
                 args: vec![],
                 context_matcher: None,
                 flag_matcher: None

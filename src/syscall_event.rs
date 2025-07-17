@@ -157,12 +157,12 @@ impl SyscallEvent {
                     (self.set_syscall_id)(Pid::from_raw(self.pid), arch_regs, 0xffff_ffff_ffff_ffff)
                 {
                     eprintln!("Error setting registers: {}", e);
-                    return self.clone();
+                    self.clone()
                 } else {
-                    return SyscallEvent {
+                    SyscallEvent {
                         blocked: true,
                         ..self.clone()
-                    };
+                    }
                 }
             }
             SyscallStopType::Exit => {
@@ -172,14 +172,14 @@ impl SyscallEvent {
                 let arch_regs = regs.to_regs();
                 if let Err(e) = ptrace::setregs(Pid::from_raw(self.pid), arch_regs) {
                     eprintln!("Error setting registers: {}", e);
-                    return self.clone();
+                    self.clone()
                 } else {
-                    return SyscallEvent {
+                    SyscallEvent {
                         blocked: true,
                         regs: regs,
                         return_value: err,
                         ..self.clone()
-                    };
+                    }
                 }
             }
         }
@@ -207,7 +207,11 @@ impl SyscallEvent {
 impl fmt::Display for SyscallEvent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut content = String::new();
-        content.push_str(&format!("[{}] {} ({})", self.pid, self.name, self.id));
+        let direction = match self.stop_type {
+            SyscallStopType::Enter => "⤵",
+            SyscallStopType::Exit => "⤴"
+        };
+        content.push_str(&format!("[{}] {}{} ({})", self.pid, direction, self.name, self.id));
         if self.label.is_some() {
             content.push_str(&format!(" |{}|", self.label.as_ref().unwrap()));
         }

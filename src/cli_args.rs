@@ -66,7 +66,8 @@ pub(crate) struct Args {
     #[arg(long = "filter-file", help = "JSON file containing filter definition")]
     pub filter_file: Option<String>,
 
-    #[arg(short='l', long="log-format", help= "Format of the logs, either 'text' or 'jsonl'", value_enum, default_value_t = LogFormat::Text)]
+    #[arg(short='l', long="log-format", help= "Format of the logs, either 'text' or 'jsonl'", value_enum, default_value_t = LogFormat::Text
+    )]
     pub log_format: LogFormat,
 
     #[arg(
@@ -75,6 +76,16 @@ pub(crate) struct Args {
         help = "Output file to write logs to, defaults to stdout"
     )]
     pub output: Option<String>,
-    #[arg(required=true, num_args=1.., help="Program to run in litterbox and its arguments. Must be separated from litterbox arguments with '--'")]
+
+    #[arg(
+        short = 'v',
+        long = "verbose",
+        help = "Verbose output",
+        default_value_t = false
+    )]
+    pub verbose: bool,
+
+    #[arg(required=true, num_args=1.., help="Program to run in litterbox and its arguments. Must be separated from litterbox arguments with '--'"
+    )]
     pub program: Vec<String>,
 }

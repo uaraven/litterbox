@@ -17,29 +17,31 @@
  */
 use std::collections::HashMap;
 
-use nix::errno::Errno;
-use nix::libc::{PTRACE_EVENT_CLONE, PTRACE_EVENT_EXEC, PTRACE_EVENT_FORK, PTRACE_EVENT_VFORK};
-use nix::sys::signal::Signal;
-use nix::sys::wait::{waitpid, WaitPidFlag, WaitStatus};
-use nix::sys::{ptrace, signal};
-use nix::unistd::Pid;
 use crate::regs::Regs;
 use crate::syscall_common::BLOCKED_SYSCALL_ID;
 use crate::syscall_event::{SyscallEvent, SyscallEventListener};
 use crate::trace_process::TraceProcess;
+use nix::errno::Errno;
+use nix::libc::{PTRACE_EVENT_CLONE, PTRACE_EVENT_EXEC, PTRACE_EVENT_FORK, PTRACE_EVENT_VFORK};
+use nix::sys::signal::Signal;
+use nix::sys::wait::{waitpid, WaitPidFlag, WaitStatus};
+use nix::sys::ptrace;
+use nix::unistd::Pid;
 
 pub struct TraceContext<F: SyscallEventListener> {
     pid: Pid,
+    verbose: bool,
     listener: Option<F>,
     processes: HashMap<Pid, TraceProcess>,
 }
 
 impl<F: SyscallEventListener> TraceContext<F> {
-    pub fn new(pid: Pid, listener: Option<F>) -> Self {
+    pub fn new(pid: Pid, listener: Option<F>, is_verbose: bool) -> Self {
         Self {
             pid,
             listener,
             processes: HashMap::new(),
+            verbose: is_verbose,
         }
     }
 
@@ -65,7 +67,9 @@ impl<F: SyscallEventListener> TraceContext<F> {
             if let Ok(wait_status) = status {
                 match wait_status {
                     WaitStatus::Exited(pid, exit_code) => {
-                        println!("Process {} exited with code {}", pid, exit_code);
+                        if self.verbose {
+                            println!("Process {} exited with code {}", pid, exit_code);
+                        }
                         self.processes.remove(&pid);
                         if pid == self.pid {
                             break;
@@ -75,7 +79,9 @@ impl<F: SyscallEventListener> TraceContext<F> {
                     }
                     WaitStatus::Signaled(pid, _, _) => {
                         self.processes.remove(&pid);
-                        println!("Process {} was terminated.", pid);
+                        if self.verbose {
+                            println!("Process {} was terminated.", pid);
+                        }
                         continue;
                     }
                     WaitStatus::PtraceEvent(pid, _, event) => {
@@ -87,7 +93,9 @@ impl<F: SyscallEventListener> TraceContext<F> {
                                 .try_into()
                                 .expect("Failed to convert event to i32");
                             let new_pid = Pid::from_raw(event_data);
-                            println!("Exec'ing new  process with pid={} exec", new_pid);
+                            if self.verbose {
+                                println!("Exec'ing new  process with pid={} exec", new_pid);
+                            }
                             // remove all other processes from the list
                             let mut pids_to_remove = Vec::new();
                             for pid in self.processes.keys() {
@@ -111,15 +119,21 @@ impl<F: SyscallEventListener> TraceContext<F> {
                                 .expect("Failed to convert event to i32");
                             let child_pid = Pid::from_raw(event_data);
                             if child_pid != self.pid {
-                                println!("Child process with pid={} forked", child_pid);
+                                if self.verbose {
+                                    println!("Child process with pid={} forked", child_pid);
+                                }
                                 if let Some(parent) = self.processes.get_mut(&pid) {
                                     let child_process = TraceProcess::clone_process(&parent, child_pid);
                                     self.processes.insert(child_pid, child_process);
                                 } else {
-                                    eprintln!("Failed to find parent pid: {} for child pid: {}", pid, child_pid);
+                                    if self.verbose {
+                                        eprintln!("Failed to find parent pid: {} for child pid: {}", pid, child_pid);
+                                    }
                                 }
                             } else {
-                                println!("Process {} started child process {}", pid, child_pid);
+                                if self.verbose {
+                                    println!("Process {} started child process {}", pid, child_pid);
+                                }
                             }
                         }
                     }
@@ -131,8 +145,12 @@ impl<F: SyscallEventListener> TraceContext<F> {
                             let syscall_event = if rr.syscall_id == BLOCKED_SYSCALL_ID && !is_entry {
                                 // this is exit from the blocked syscall
                                 // replace error in syscall_id with the last syscall id for this process
-                                rr.syscall_id = process.get_previous_syscall().regs.syscall_id;
-                                println!("Got response to a blocked syscall {:?}", rr);
+                                let prev_syscall =process.get_previous_syscall();
+                                rr.syscall_id = prev_syscall.regs.syscall_id;
+                                rr.return_value = prev_syscall.return_value;
+                                if self.verbose {
+                                    println!("Got response to a blocked syscall {:?}", rr);
+                                }
                                 regs = rr.to_regs();
                                 let mut syscall_event = SyscallEvent::from_syscall(process, regs);
                                 syscall_event = syscall_event.block_syscall(Some(-1));
@@ -153,8 +171,10 @@ impl<F: SyscallEventListener> TraceContext<F> {
                                 }
                             }
                         } else {
+                            if self.verbose {
                             let regs = ptrace::getregs(pid).unwrap();
                             eprintln!("Received syscall for unknown pid {}, ignoring. Regs: {:?}", pid, regs)
+                                }
                         }
                     }
                     WaitStatus::Stopped(pid, signal) => {
@@ -168,7 +188,9 @@ impl<F: SyscallEventListener> TraceContext<F> {
                             | Signal::SIGTTOU => {
                                 match ptrace::getsiginfo(pid) {
                                     Ok(siginfo) => {
-                                        println!("Pid:{}, self.pid: {}, SIGSTOP signal: {:?}", pid, self.pid, siginfo);
+                                        if self.verbose {
+                                            println!("Pid:{}, self.pid: {}, SIGSTOP signal: {:?}", pid, self.pid, siginfo);
+                                        }
                                     }
                                     Err(e) => {
                                         if e == Errno::EINVAL {
@@ -178,21 +200,27 @@ impl<F: SyscallEventListener> TraceContext<F> {
                                 }
                             }
                             _ => {
-                                println!("Pid:{}, self.pid: {}, unknown signal: {:?}", pid, self.pid, signal);
+                                if self.verbose {
+                                    println!("Pid:{}, self.pid: {}, unknown signal: {:?}", pid, self.pid, signal);
+                                }
                             }
                         }
                     }
                     _ => {}
                 }
             } else {
-                eprintln!("Error waiting for child process");
+                if self.verbose {
+                    eprintln!("Error waiting for child process");
+                }
                 break;
             }
 
             match ptrace::syscall(restart_pid, inject_signal) {
                 Ok(_) => {}
                 Err(e) => {
-                    eprintln!("Error continuing tracee {}: {}", self.pid, e);
+                    if self.verbose {
+                        eprintln!("Failed to continuing tracee {}, process may have been terminated: {}", self.pid, e);
+                    }
                 }
             }
 
