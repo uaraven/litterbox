@@ -22,7 +22,7 @@ use crate::syscall_common::BLOCKED_SYSCALL_ID;
 use crate::syscall_event::{SyscallEvent, SyscallEventListener};
 use crate::trace_process::TraceProcess;
 use nix::errno::Errno;
-use nix::libc::{PTRACE_EVENT_CLONE, PTRACE_EVENT_EXEC, PTRACE_EVENT_FORK, PTRACE_EVENT_VFORK};
+use nix::libc::{user_regs_struct, PTRACE_EVENT_CLONE, PTRACE_EVENT_EXEC, PTRACE_EVENT_FORK, PTRACE_EVENT_VFORK};
 use nix::sys::signal::Signal;
 use nix::sys::wait::{waitpid, WaitPidFlag, WaitStatus};
 use nix::sys::ptrace;
@@ -141,23 +141,14 @@ impl<F: SyscallEventListener> TraceContext<F> {
                         restart_pid = pid;
                         if let Some(process) = self.processes.get_mut(&pid) {
                             let mut regs = ptrace::getregs(pid).unwrap();
-                            let mut rr = Regs::from_regs(&regs);
+                            let rr = Regs::from_regs(&regs);
                             let syscall_event = if rr.syscall_id == BLOCKED_SYSCALL_ID && !is_entry {
                                 // this is exit from the blocked syscall
                                 // replace error in syscall_id with the last syscall id for this process
-                                let prev_syscall =process.get_previous_syscall();
-                                rr.syscall_id = prev_syscall.regs.syscall_id;
-                                rr.return_value = prev_syscall.return_value;
-                                if self.verbose {
-                                    println!("Got response to a blocked syscall {:?}", rr);
-                                }
-                                regs = rr.to_regs();
-                                let mut syscall_event = SyscallEvent::from_syscall(process, regs);
-                                syscall_event = syscall_event.block_syscall(Some(-1));
-                                syscall_event
+                                TraceContext::<F>::handle_blocked_syscall(process,&mut regs, rr, self.verbose)
                             } else {
                                 SyscallEvent::from_syscall(process, regs)
-                            };
+        };
                             process.set_current_stop_type(syscall_event.stop_type);
 
                             if let Some(event_listener) = &mut self.listener {
@@ -226,5 +217,23 @@ impl<F: SyscallEventListener> TraceContext<F> {
 
             is_entry = !is_entry;
         }
+    }
+
+fn handle_blocked_syscall(
+            process: &mut TraceProcess,
+        regs: &mut user_regs_struct,
+        mut rr: Regs,
+        verbose: bool,
+    ) -> SyscallEvent {
+        let prev_syscall = process.get_previous_syscall();
+        rr.syscall_id = prev_syscall.regs.syscall_id;
+        rr.return_value = prev_syscall.return_value;
+        if verbose {
+            println!("Got response to a blocked syscall {:?}", rr);
+        }
+        *regs = rr.to_regs();
+        let mut syscall_event = SyscallEvent::from_syscall(process, *regs);
+        syscall_event = syscall_event.block_syscall(Some(-1));
+        syscall_event
     }
 }
