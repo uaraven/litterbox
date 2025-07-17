@@ -21,7 +21,7 @@ pub mod context_matcher;
 pub mod argument_matcher;
 pub mod dto;
 pub mod flag_matcher;
-pub mod matcher;
+pub mod str_matcher;
 pub mod path_matcher;
 pub mod syscall_filter;
 #[cfg(target_arch = "aarch64")]

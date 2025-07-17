@@ -29,7 +29,7 @@ use crate::{
     filters::{
         context_matcher::ContextMatcher,
         flag_matcher::FlagMatcher,
-        matcher::StrMatchOp,
+        str_matcher::StrMatchOp,
         path_matcher::PathMatcher,
         syscall_filter::{FilterAction, FilterOutcome, SyscallFilter},
     },

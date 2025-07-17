@@ -26,7 +26,6 @@ use nix::{
     unistd::Pid,
 };
 
-
 use crate::syscall_event::{SyscallEvent, SyscallStopType};
 
 /// A struct to hold the additional data for a file descriptor
@@ -76,7 +75,6 @@ pub fn set_syscall_id(
     _arch_regs: user_regs_struct,
     new_syscall_id: u64,
 ) -> Result<(), nix::Error> {
-
     const PTRACE_SETREGSET: usize = 0x4205;
     const NT_ARM_SYSTEM_CALL: usize = 0x404;
 
@@ -145,10 +143,14 @@ impl TraceProcess {
     // If the current syscall ID is not the same as the last syscall ID, return None
     pub(crate) fn get_last_syscall(&self, current_syscall_id: u64) -> Option<&SyscallEvent> {
         if self.last_syscall.id != current_syscall_id {
-            return None;
+            None
         } else {
             Some(&self.last_syscall)
         }
+    }
+
+    pub(crate) fn get_previous_syscall(&self) -> SyscallEvent {
+        self.last_syscall.clone()
     }
 
     pub(crate) fn set_last_syscall(&mut self, syscall: &SyscallEvent) {

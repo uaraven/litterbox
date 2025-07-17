@@ -27,7 +27,7 @@ use crate::filters::syscall_filter::SyscallMatcher;
 use crate::{
     filters::{
         context_matcher::ContextMatcher,
-        matcher::StrMatchOp,
+        str_matcher::StrMatchOp,
         path_matcher::PathMatcher,
         syscall_filter::{FilterOutcome, SyscallFilter},
     },

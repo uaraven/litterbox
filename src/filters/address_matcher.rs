@@ -15,9 +15,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
-use crate::filters::matcher::StrMatchOp;
+use crate::filters::str_matcher::StrMatchOp;
 
-use super::matcher::StrMatcher;
+use super::str_matcher::StrMatcher;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AddressMatcher {

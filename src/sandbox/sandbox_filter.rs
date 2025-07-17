@@ -58,7 +58,7 @@ pub(crate) fn create_sandbox_filters(
     let mut filters = create_write_filter(writable_paths);
     filters.push(create_reader_filter());
     filters.extend(create_network_filter(connectable_addresses));
-    filters.push(create_process_filter(allow_spawn));
+    filters.extend(create_process_filter(allow_spawn));
     filters.push(create_system_filter());
     filters.push(default_filter());
 

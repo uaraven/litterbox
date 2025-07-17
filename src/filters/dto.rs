@@ -27,7 +27,7 @@ use super::{
 };
 use crate::{
     filters::{
-        address_matcher::AddressMatcher, argument_matcher::{ArgValue, ArgumentMatcher}, context_matcher::ContextMatcher, matcher::StrMatchOp, syscall_filter::SyscallMatcher
+        address_matcher::AddressMatcher, argument_matcher::{ArgValue, ArgumentMatcher}, context_matcher::ContextMatcher, str_matcher::StrMatchOp, syscall_filter::SyscallMatcher
     },
     loggers::syscall_logger::SyscallLogger,
     FilteringLogger,

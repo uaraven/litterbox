@@ -16,7 +16,7 @@
  *
  */
 
-use crate::filters::{flag_matcher::FlagMatcher, matcher::StrMatcher};
+use crate::filters::{flag_matcher::FlagMatcher, str_matcher::StrMatcher};
 
 #[test]
 fn flags_matcher_test() {

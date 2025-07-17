@@ -18,7 +18,7 @@ use crate::filters::argument_matcher::{ArgValue, ArgumentMatcher};
  */
 #[cfg(test)]
 use crate::filters::{
-    dto::parse_compare_op, dto::SyscallFilterDto, matcher::StrMatchOp, syscall_filter::FilterAction,
+    dto::parse_compare_op, dto::SyscallFilterDto, str_matcher::StrMatchOp, syscall_filter::FilterAction,
 };
 #[cfg(test)]
 use serde_json::json;

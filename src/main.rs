@@ -65,11 +65,6 @@ fn main() {
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
 
-    if program_args.is_empty() {
-        eprintln!("Usage: litterbox [options...] -- <program> <args...>");
-        std::process::exit(3);
-    }
-
     match unsafe { fork() } {
         Ok(ForkResult::Child) => {
             let pid = std::process::id();

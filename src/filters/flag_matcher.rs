@@ -16,7 +16,7 @@
  *
  */
 
-use super::matcher::StrMatcher;
+use super::str_matcher::StrMatcher;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FlagMatcher {

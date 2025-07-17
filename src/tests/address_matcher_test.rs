@@ -18,7 +18,7 @@
 
 use crate::filters::{
     address_matcher::AddressMatcher,
-    matcher::{StrMatchOp, StrMatcher},
+    str_matcher::{StrMatchOp, StrMatcher},
 };
 
 #[test]

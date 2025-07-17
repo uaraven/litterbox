@@ -18,7 +18,7 @@
 use crate::filters::argument_matcher::{ArgValue, ArgumentMatcher};
 use crate::filters::context_matcher::ContextMatcher;
 use crate::filters::flag_matcher::FlagMatcher;
-use crate::filters::matcher::StrMatchOp;
+use crate::filters::str_matcher::StrMatchOp;
 use crate::filters::path_matcher::PathMatcher;
 use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher};
 use crate::filters::utils::syscall_ids_by_names;
@@ -139,11 +139,6 @@ fn create_filter_for_writes(
         "fchown",
         "lchown",
         "fchownat",
-        // Time modification
-        "utime",
-        "utimes",
-        "utimensat",
-        "futimesat",
         // Other filesystem operations
         "mknod",
         "mknodat",
@@ -214,11 +209,47 @@ pub(crate) fn create_write_filter(allowed_paths: Vec<&str>) -> Vec<SyscallFilter
             &filter_outcome_allow,
         ));
     }
+    filters.push(create_stdout_stderr_write_filter());
     filters.push(create_filter_for_open_syscall(None, &filter_outcome_block));
     filters.extend(create_filter_for_mknod(None, &filter_outcome_block));
     filters.push(create_filter_for_writes(None, &filter_outcome_block));
 
     filters
+}
+
+/// Creates a SyscallFilter that allows write operations to stdout (fd 1) and stderr (fd 2).
+/// This filter allows write syscalls when the file descriptor is 1 or 2.
+pub(crate) fn create_stdout_stderr_write_filter() -> SyscallFilter {
+    let write_syscalls = vec![
+        "write",
+        "writev",
+        "pwrite",
+        "pwrite64",
+        "pwritev",
+        "pwritev2",
+    ];
+
+    let write_syscall_ids: HashSet<i64> = syscall_ids_by_names(write_syscalls);
+
+    // Create argument matcher for file descriptor (first argument, index 0)
+    // Match fd 1 (stdout) and fd 2 (stderr)
+    let fd_matcher = ArgumentMatcher::new(0, vec![ArgValue::Equal(1), ArgValue::Equal(2)]);
+
+    let filter_outcome = FilterOutcome {
+        action: FilterAction::Allow,
+        tag: Some("write".to_string()),
+        log: true,
+    };
+
+    SyscallFilter {
+        matcher: SyscallMatcher {
+            syscall: write_syscall_ids,
+            args: vec![fd_matcher],
+            context_matcher: None,
+            flag_matcher: None,
+        },
+        outcome: filter_outcome,
+    }
 }
 
 #[cfg(test)]
@@ -237,8 +268,9 @@ mod tests {
     fn test_write_filter_outcome() {
         let filters = create_write_filter(vec![]);
 
-        // Test that both filters have the same outcome (block and log)
-        for filter in &filters {
+        // Test that all but first filter have the same outcome (block and log)
+        // first one should allow writes to stdout and stderr
+        for filter in filters.iter().skip(1) {
             match filter.outcome.action {
                 FilterAction::Block(error_code) => assert_eq!(error_code, -1),
                 _ => panic!("Expected Block action"),
@@ -466,5 +498,81 @@ mod tests {
         let event = create_test_syscall_event("mkdir", &extra, &regs);
 
         test_event_filter(filters, &proc, &event, false);
+    }
+
+    #[test]
+    fn test_write_filter_allows_stdout() {
+        let filter = create_stdout_stderr_write_filter();
+        let proc = TraceProcess::new(nix::unistd::Pid::from_raw(1000));
+
+        // Test write to stdout (fd 1)
+        let mut regs = Regs::default();
+        if let Some(write_id) = syscall_id_by_name("write") {
+            regs.syscall_id = write_id;
+            regs.regs[0] = 1; // stdout fd
+        }
+
+        let event = SyscallEvent {
+            id: regs.syscall_id,
+            name: "write".to_string(),
+            set_syscall_id: |_, _, _| Ok(()),
+            pid: 1000,
+            arguments: Default::default(),
+            regs: regs.clone(),
+            return_value: 0,
+            stop_type: SyscallStopType::Enter,
+            extra_context: HashMap::new(),
+            blocked: false,
+            label: None,
+        };
+
+        // Verify that the filter matches stdout writes
+        assert!(filter.matcher.matches(&proc, &event));
+
+        // Verify that the action is Allow with correct tag
+        match filter.outcome.action {
+            FilterAction::Allow => {},
+            _ => panic!("Expected Allow action for stdout writes"),
+        }
+        assert!(filter.outcome.log);
+        assert_eq!(filter.outcome.tag, Some("write".to_string()));
+    }
+
+    #[test]
+    fn test_write_filter_allows_stderr() {
+        let filter = create_stdout_stderr_write_filter();
+        let proc = TraceProcess::new(nix::unistd::Pid::from_raw(1000));
+
+        // Test write to stderr (fd 2)
+        let mut regs = Regs::default();
+        if let Some(write_id) = syscall_id_by_name("write") {
+            regs.syscall_id = write_id;
+            regs.regs[0] = 2; // stderr fd
+        }
+
+        let event = SyscallEvent {
+            id: regs.syscall_id,
+            name: "write".to_string(),
+            set_syscall_id: |_, _, _| Ok(()),
+            pid: 1000,
+            arguments: Default::default(),
+            regs: regs.clone(),
+            return_value: 0,
+            stop_type: SyscallStopType::Enter,
+            extra_context: HashMap::new(),
+            blocked: false,
+            label: None,
+        };
+
+        // Verify that the filter matches stderr writes
+        assert!(filter.matcher.matches(&proc, &event));
+
+        // Verify that the action is Allow with correct tag
+        match filter.outcome.action {
+            FilterAction::Allow => {},
+            _ => panic!("Expected Allow action for stderr writes"),
+        }
+        assert!(filter.outcome.log);
+        assert_eq!(filter.outcome.tag, Some("write".to_string()));
     }
 }

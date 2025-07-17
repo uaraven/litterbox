@@ -17,7 +17,7 @@
  */
 use crate::filters::address_matcher::AddressMatcher;
 use crate::filters::context_matcher::ContextMatcher;
-use crate::filters::matcher::StrMatchOp;
+use crate::filters::str_matcher::StrMatchOp;
 use crate::filters::syscall_filter::{FilterAction, FilterOutcome, SyscallFilter, SyscallMatcher};
 use crate::filters::utils::syscall_ids_by_names;
 use std::collections::HashSet;

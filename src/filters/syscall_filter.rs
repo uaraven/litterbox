@@ -22,7 +22,7 @@ use nix::libc;
 
 use crate::{
     filters::{
-        argument_matcher::ArgumentMatcher, context_matcher::ContextMatcher, flag_matcher::FlagMatcher, matcher::StrMatcher
+        argument_matcher::ArgumentMatcher, context_matcher::ContextMatcher, flag_matcher::FlagMatcher, str_matcher::StrMatcher
     },
     syscall_event::SyscallEvent,
     trace_process::TraceProcess,

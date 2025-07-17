@@ -26,6 +26,8 @@ use crate::regs::Regs;
 use crate::syscall_event::SyscallEvent;
 use crate::trace_process::TraceProcess;
 
+pub(crate) const BLOCKED_SYSCALL_ID: u64 = 18446744073709551615;
+
 pub(crate) const EXTRA_PATHNAME: &str = "pathname";
 pub(crate) const EXTRA_NEW_PATHNAME: &str = "new_pathname";
 pub(crate) const EXTRA_TARGET_PATHNAME: &str = "target_pathname";
