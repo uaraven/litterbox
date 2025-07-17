@@ -187,7 +187,7 @@ pub(crate) fn create_write_filter(allowed_paths: Vec<&str>) -> Vec<SyscallFilter
     };
 
     let mut filters = vec![];
-
+    filters.push(create_stdout_stderr_write_filter());
     if !allowed_paths.is_empty() {
         let ctx_matcher = Some(ContextMatcher::PathMatcher(PathMatcher::new(
             allowed_paths.into_iter().map(|s| s.to_string()).collect(),
@@ -207,7 +207,6 @@ pub(crate) fn create_write_filter(allowed_paths: Vec<&str>) -> Vec<SyscallFilter
             &filter_outcome_allow,
         ));
     }
-    filters.push(create_stdout_stderr_write_filter());
     filters.push(create_filter_for_open_syscall(None, &filter_outcome_block));
     filters.extend(create_filter_for_mknod(None, &filter_outcome_block));
     filters.push(create_filter_for_writes(None, &filter_outcome_block));
@@ -461,22 +460,22 @@ mod tests {
     }
 
     #[test]
-    fn test_create_write_filter_with_tmp_path_mkdir_not_blocked() {
-        let filters = create_write_filter(vec!["/tmp"]);
+    fn test_create_write_filter_with_tmp_path_mkdir_blocked() {
         let proc = TraceProcess::new(nix::unistd::Pid::from_raw(1000));
+        let filters = create_write_filter(vec!["/tmp"]);
 
         // Test mkdir syscall to a path outside /tmp should be blocked
         let mut extra = HashMap::new();
         extra.insert(EXTRA_PATHNAME, "/home/user/newdir".to_string());
 
         let mut regs = Regs::default();
-        if let Some(mkdir_id) = syscall_id_by_name("mkdir") {
+        if let Some(mkdir_id) = syscall_id_by_name("mkdirat") {
             regs.syscall_id = mkdir_id;
         }
 
-        let event = create_test_syscall_event("mkdir", &extra, &regs);
+        let event = create_test_syscall_event("mkdirat", &extra, &regs);
 
-        test_event_filter(filters, &proc, &event, false);
+        test_event_filter(filters, &proc, &event, true);
     }
 
     #[test]
