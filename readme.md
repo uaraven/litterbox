@@ -6,6 +6,10 @@ _Litterbox_ is a sandboxing and syscall tracing tool designed for analyzing pote
 
 It allows you to run an application while blocking unsafe system calls — such as file modifications, network activity, and process spawning — and provides detailed syscall logs with enhanced context.
 
+<span style="color:red">
+*WARNING*: The raison d'être of this project is me learning Rust. While the program does what it says on the lid (mostly), it has not been thouroughly tested yet and should not be relied upon.
+</span>
+
 ## Sandbox
 
 Like `strace`, _Litterbox_ allows tracing the syscalls and blocking them. Syscalls can be filtered based on file paths or IP addresses, even for syscalls like `read`, `write` or `sendmsg`, that don't include this information. This is achieved by tracking open/close calls to associate file descriptors with paths. Similar tracking is used for sockets and IP addresses.
