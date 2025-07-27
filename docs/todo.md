@@ -14,12 +14,12 @@
         - [x] no color
     - [x] JSONL logging
 - [ ] DNS sniffing
-- [ ] Simple sandboxing
-  - [ ] Block all writes except designated directories
-  - [ ] Block all outgoing connections except designated IP addresses/Hosts
-  - [ ] Block server sockets
-  - [ ] Block spawning processes except designated apps by path
-  - [ ] Block shutdown and reboot
+- [x] Simple sandboxing
+  - [x] Block all writes except designated directories
+  - [x] Block all outgoing connections except designated IP addresses/Hosts
+  - [x] Block server sockets
+  - [x] Block spawning processes except designated apps by path
+  - [x] Block shutdown and reboot
 
 
 ## Limitations

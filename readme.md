@@ -33,7 +33,50 @@ _Litterbox_ supports two modes of configuration:
 
 ### Running
 
-TBD
+#### Sandbox 
+
+In the sandbox mode _Litterbox_ intercepts predefined set of syscalls and logs them. Some of the syscalls are blocked. The only syscalls that are intercepted are:
+
+ - read and write to stdin, stdout and stderr - logged
+ - filesystem reads - logged
+ - filesystem writes - logged and blocked (except for /tmp folder)
+ - listen on network socket - logged and blocked
+ - connect to other host - logged and blocked
+ - execute another process - logged and blocked
+ - shutdown - logged and blocked
+
+```shell
+$ litterbox --sandbox [--allow-write <folder-prefix>...] [--allow-spawn <program-name>...] [--allow-connect <ip-address-prefix>...] -- program-name args...
+```
+
+This will run the binary `program-name` with CLI parameters `args...` in a sandbox environment. By default the program is not
+allowed to write anything to the storage (except in /tmp folder), it is not allowed to connected to any host or listen for
+incoming connections and it cannot start any other programs. These restrictions can be relaxed a bit.
+
+`--allow-write` enables writing to a directory. One may add multiple directories using multiple `--allow-write` parameters. All subdirectories will also be writable.
+
+`--allow-connect` enables connecting to a given IP address(es). IP addresses are matched as simple string prefixes, e.g. `--allow-connect 192.168.` will allow connection to all IP addresses starting with `192.168`.
+
+`--allow-spawn` allows `program-name` to start other programs. Arguments to `--allow-spawn` are matched as suffixes, e.g. 
+`--allow-spawn bash` will match /bin/bash, /usr/bin/bash or /home/user/any/directory/bash.
+
+#### Custom filter mode
+
+```shell
+$ litterbox --filter --filter-file <filter-file> -- program-name args...
+```
+
+In this mode _Litterbox_ only does what the filters in the `filter-file` tells it to do. By default it doesn't intercept any syscalls, doesn't block anything or logs anything.
+
+`filter-file` containing the filters must be provided. See [filter documentation](docs/filters.md) for more information on using filters.
+
+#### Common options
+
+- `--output <log-file>` - writes _Litterbox_ output into the `log-file` instead of stdout
+- `--log-format text|jsonl` - configures the format of the output. JSONL format is better for machine parsing of the results
+- `--verbose` - produce more verbose output
+
+
 
 ## License
 
